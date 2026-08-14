@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	tele "gopkg.in/telebot.v3"
+	tele "gopkg.in/telebot.v4"
 )
 
 type Processor struct {
@@ -29,20 +29,6 @@ func (p *Processor) Add(message *tele.Message) {
 	p.mu.Unlock()
 }
 
-func (p *Processor) Take() []*tele.Message {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	if len(p.messages) == 0 {
-		return nil
-	}
-
-	messages := p.messages
-	p.messages = make([]*tele.Message, 0)
-
-	return messages
-}
-
 func (p *Processor) Start() {
 	go func() {
 		defer close(p.done)
@@ -64,7 +50,7 @@ func (p *Processor) Start() {
 }
 
 func (p *Processor) process() {
-	messages := p.Take()
+	messages := p.take()
 
 	if len(messages) == 0 {
 		return
@@ -75,6 +61,20 @@ func (p *Processor) process() {
 		// ...
 		_ = message
 	}
+}
+
+func (p *Processor) take() []*tele.Message {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if len(p.messages) == 0 {
+		return nil
+	}
+
+	messages := p.messages
+	p.messages = make([]*tele.Message, 0)
+
+	return messages
 }
 
 func (p *Processor) Close() {
