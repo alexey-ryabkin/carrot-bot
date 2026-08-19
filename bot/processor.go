@@ -1,25 +1,30 @@
 package bot
 
 import (
+	"log"
 	"sync"
 	"time"
 
+	"github.com/alexey-ryabkin/markov-module"
+	"github.com/alexey-ryabkin/markov-module/model"
 	tele "gopkg.in/telebot.v4"
 )
 
 type Processor struct {
 	mu       sync.Mutex
 	messages []*tele.Message
+	markov   *markov.Engine
 
 	stop chan struct{}
 	done chan struct{}
 }
 
-func NewProcessor() *Processor {
+func NewProcessor(engine *markov.Engine) *Processor {
 	return &Processor{
 		messages: make([]*tele.Message, 0),
 		stop:     make(chan struct{}),
 		done:     make(chan struct{}),
+		markov:   engine,
 	}
 }
 
@@ -56,10 +61,24 @@ func (p *Processor) process() {
 		return
 	}
 
+	markov_messages := make([]model.Message, 0, len(messages))
+
 	// Здесь обрабатывается вся группа.
 	for _, message := range messages {
-		// ...
-		_ = message
+		if message.Sender == nil {
+			continue
+		}
+		markov_messages = append(markov_messages, model.Message{
+			ChatId:   message.Chat.ID,
+			UserId:   message.Sender.ID,
+			UnixTime: message.Unixtime,
+			Text:     message.Text,
+		})
+	}
+
+	err := p.markov.LearnMany(markov_messages)
+	if err != nil {
+		log.Fatal(err)
 	}
 }
 

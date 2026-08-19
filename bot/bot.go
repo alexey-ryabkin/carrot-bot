@@ -5,15 +5,17 @@ import (
 	"os"
 	"time"
 
+	"github.com/alexey-ryabkin/markov-module"
 	tele "gopkg.in/telebot.v4"
 )
 
 type Bot struct {
-	TeleBot *tele.Bot
-	MyProcessor *Processor
+	TeleBot      *tele.Bot
+	MyProcessor  *Processor
+	MarkovEngine *markov.Engine
 }
 
-func New() (*Bot, error) {
+func New(engine *markov.Engine) (*Bot, error) {
 	b, err := tele.NewBot(tele.Settings{
 		Token: os.Getenv("TELEGRAM_TOKEN"),
 		Poller: &tele.LongPoller{
@@ -25,14 +27,20 @@ func New() (*Bot, error) {
 	}
 
 	bot := &Bot{
-		TeleBot:    b,
-		MyProcessor: NewProcessor(),
+		TeleBot:      b,
+		MyProcessor:  NewProcessor(engine),
+		MarkovEngine: engine,
 	}
 
 	b.Handle("/start", start)
 	b.Handle(tele.OnText, bot.text)
 
 	return bot, nil
+}
+
+func (b *Bot) Start() {
+	b.TeleBot.Start()
+	b.MyProcessor.Start()
 }
 
 func start(c tele.Context) error {
@@ -52,6 +60,7 @@ func (b *Bot) text(c tele.Context) error {
 
 func (b *Bot) Terminate() error {
 	b.TeleBot.Stop()
+	b.MyProcessor.Close()
 
 	// Здесь:
 	// - остановить фоновые задачи

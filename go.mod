@@ -2,11 +2,22 @@ module github.com/alexey-ryabkin/carrot-bot
 
 go 1.25.0
 
-require gopkg.in/telebot.v3 v3.3.8 // indirect
+require (
+	github.com/alexey-ryabkin/markov-module v0.0.0-00010101000000-000000000000
+	gopkg.in/telebot.v4 v4.0.0-beta.10
+)
 
 require (
-	github.com/alexey-ryabkin/markov-module v0.0.0
-	gopkg.in/telebot.v4 v4.0.0-beta.10
+	github.com/dustin/go-humanize v1.0.1 // indirect
+	github.com/google/uuid v1.6.0 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/ncruces/go-strftime v1.0.0 // indirect
+	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
+	golang.org/x/sys v0.46.0 // indirect
+	modernc.org/libc v1.74.1 // indirect
+	modernc.org/mathutil v1.7.1 // indirect
+	modernc.org/memory v1.11.0 // indirect
+	modernc.org/sqlite v1.54.0 // indirect
 )
 
 replace github.com/alexey-ryabkin/markov-module => ../markov-module
