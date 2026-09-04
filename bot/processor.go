@@ -5,8 +5,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/alexey-ryabkin/carrot-bot/model"
+	"github.com/alexey-ryabkin/carrot-bot/storage"
 	"github.com/alexey-ryabkin/markov-module"
-	"github.com/alexey-ryabkin/markov-module/model"
+	markovModel "github.com/alexey-ryabkin/markov-module/model"
 	tele "gopkg.in/telebot.v4"
 )
 
@@ -14,17 +16,19 @@ type Processor struct {
 	mu       sync.Mutex
 	messages []*tele.Message
 	markov   *markov.Engine
+	db		 *storage.SQLite
 
 	stop chan struct{}
 	done chan struct{}
 }
 
-func NewProcessor(engine *markov.Engine) *Processor {
+func NewProcessor(engine *markov.Engine, db *storage.SQLite) *Processor {
 	return &Processor{
 		messages: make([]*tele.Message, 0),
 		stop:     make(chan struct{}),
 		done:     make(chan struct{}),
 		markov:   engine,
+		db:       db,
 	}
 }
 
@@ -61,22 +65,45 @@ func (p *Processor) process() {
 		return
 	}
 
-	markov_messages := make([]model.Message, 0, len(messages))
+	// Обучение
+	p.learn(messages)
 
-	// Здесь обрабатывается вся группа.
+	// Генерация
+
+}
+
+func (p *Processor) learn(messages []*tele.Message) {
+	markovMessages := make([]markovModel.Message, 0, len(messages))
+	carrotMessages := make([]model.Message, 0, len(messages))
+
 	for _, message := range messages {
 		if message.Sender == nil {
 			continue
 		}
-		markov_messages = append(markov_messages, model.Message{
+		markovMessages = append(markovMessages, markovModel.Message{
 			ChatId:   message.Chat.ID,
 			UserId:   message.Sender.ID,
 			UnixTime: message.Unixtime,
 			Text:     message.Text,
 		})
+		carrotMessages = append(carrotMessages, model.Message{
+			ChatId:   message.Chat.ID,
+			UserId:   message.Sender.ID,
+			UnixTime: message.Unixtime,
+		})
 	}
 
-	err := p.markov.LearnMany(markov_messages)
+	err := p.markov.LearnMany(markovMessages)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = p.db.SaveMessages(carrotMessages)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = p.db.CleanOldMessages(time.Hour * 24 * 7)
 	if err != nil {
 		log.Fatal(err)
 	}

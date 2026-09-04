@@ -1,4 +1,4 @@
-package main
+package carrotbot
 
 import (
 	"log"
@@ -11,18 +11,21 @@ import (
 )
 
 func main() {
-	config := markov.Config {
-		DatabasePath:         "data/markov.db",
-		Order:                3,
-		DefaultMessageLength: 20,
+	config := bot.Config {
+		DatabasePath: "data/carrotbot.db",
 	}
 
-	markov, err := markov.New(config)
+	configMarkov := markov.Config {
+		DatabasePath:         "data/markov.db",
+		Order:                3,
+	}
+
+	markov, err := markov.New(configMarkov)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	b, err := bot.New(markov)
+	b, err := bot.New(config, markov)
 	if err != nil {
 		log.Fatal(err)
 	}

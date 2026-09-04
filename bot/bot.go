@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/alexey-ryabkin/carrot-bot/storage"
 	"github.com/alexey-ryabkin/markov-module"
 	tele "gopkg.in/telebot.v4"
 )
@@ -13,9 +14,11 @@ type Bot struct {
 	TeleBot      *tele.Bot
 	MyProcessor  *Processor
 	MarkovEngine *markov.Engine
+	db           *storage.SQLite
+	cfg          Config
 }
 
-func New(engine *markov.Engine) (*Bot, error) {
+func New(cfg Config, engine *markov.Engine) (*Bot, error) {
 	b, err := tele.NewBot(tele.Settings{
 		Token: os.Getenv("TELEGRAM_TOKEN"),
 		Poller: &tele.LongPoller{
@@ -26,10 +29,17 @@ func New(engine *markov.Engine) (*Bot, error) {
 		return nil, err
 	}
 
+	db, err := storage.GetDB(cfg.DatabasePath)
+	if err != nil {
+		return nil, err
+	}
+
 	bot := &Bot{
 		TeleBot:      b,
-		MyProcessor:  NewProcessor(engine),
+		MyProcessor:  NewProcessor(engine, db),
 		MarkovEngine: engine,
+		db:           db,
+		cfg:          cfg,
 	}
 
 	b.Handle("/start", start)
