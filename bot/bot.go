@@ -13,6 +13,7 @@ import (
 type Bot struct {
 	TeleBot      *tele.Bot
 	MyProcessor  *Processor
+	Sender       *Sender
 	MarkovEngine *markov.Engine
 	db           *storage.SQLite
 	cfg          Config
@@ -37,6 +38,7 @@ func New(cfg Config, engine *markov.Engine) (*Bot, error) {
 	bot := &Bot{
 		TeleBot:      b,
 		MyProcessor:  NewProcessor(engine, db),
+		Sender:       NewSender(b, engine, db, cfg),
 		MarkovEngine: engine,
 		db:           db,
 		cfg:          cfg,
@@ -49,8 +51,11 @@ func New(cfg Config, engine *markov.Engine) (*Bot, error) {
 }
 
 func (b *Bot) Start() {
-	b.TeleBot.Start()
+	// tele.Bot.Start() блокирует поллер в горутине — запускаем в фоне,
+	// чтобы ниже стартовали фоновые задачи процессора и отправителя.
+	go b.TeleBot.Start()
 	b.MyProcessor.Start()
+	b.Sender.Start()
 }
 
 func start(c tele.Context) error {
@@ -71,6 +76,7 @@ func (b *Bot) text(c tele.Context) error {
 func (b *Bot) Terminate() error {
 	b.TeleBot.Stop()
 	b.MyProcessor.Close()
+	b.Sender.Close()
 
 	// Здесь:
 	// - остановить фоновые задачи
