@@ -1,4 +1,4 @@
-package carrotbot
+package main
 
 import (
 	"log"
