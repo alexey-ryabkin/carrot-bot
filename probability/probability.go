@@ -1,6 +1,7 @@
 package probability
 
 import (
+	"log"
 	"math"
 	"math/rand"
 	"time"
@@ -81,5 +82,11 @@ func ShouldSend(
 		checkInterval.Seconds(),
 		p)
 
-	return rand.Float64() < pSend
+	roll := rand.Float64()
+	decision := roll < pSend
+
+	log.Printf("ShouldSend: messagesLast7Days=%d silence=%s userMessages=%d checkInterval=%v p=%.6f roll=%.6f decision=%t",
+		messagesLast7Days, silence.Round(time.Second), userMessages, checkInterval, pSend, roll, decision)
+
+	return decision
 }

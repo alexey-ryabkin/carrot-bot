@@ -56,7 +56,7 @@ func (p *Processor) Start() {
 	go func() {
 		defer close(p.done)
 
-		log.Printf("процессор запущен, сброс каждые %.1f с", p.cfg.QueueReadInterval.Seconds())
+		log.Printf("процессор запущен, сброс каждые %v", p.cfg.QueueReadInterval)
 
 		ticker := time.NewTicker(p.cfg.QueueReadInterval)
 		defer ticker.Stop()

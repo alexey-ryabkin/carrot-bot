@@ -201,20 +201,17 @@ func (s *Sender) shouldSend(chatID int64, now time.Time) (bool, error) {
 		return false, err
 	}
 
-	pSend := probability.Probability(
+	send := probability.ShouldSend(
 		weekCount,
-		silence.Seconds(),
+		silence,
 		msgsSinceBot,
-		s.cfg.SendCheckInterval.Seconds(),
+		s.cfg.SendCheckInterval,
 		s.cfg.ProbabilityParams,
 	)
-	roll := rand.Float64()
-	decision := roll < pSend
+	log.Printf("shouldSend, чат %d: weekMessages=%d silence=%s msgsSinceBot=%d decision=%t",
+		chatID, weekCount, silence.Round(time.Second), msgsSinceBot, send)
 
-	log.Printf("shouldSend, чат %d: weekMessages=%d silence=%s msgsSinceBot=%d p=%.6f roll=%.6f decision=%t",
-		chatID, weekCount, silence.Round(time.Second), msgsSinceBot, pSend, roll, decision)
-
-	return decision, nil
+	return send, nil
 }
 
 // pickUser выбирает автора будущего сообщения пропорционально его активности
