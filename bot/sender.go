@@ -208,8 +208,7 @@ func (s *Sender) shouldSend(chatID int64, now time.Time) (bool, error) {
 		s.cfg.SendCheckInterval,
 		s.cfg.ProbabilityParams,
 	)
-	log.Printf("shouldSend, чат %d: weekMessages=%d silence=%s msgsSinceBot=%d decision=%t",
-		chatID, weekCount, silence.Round(time.Second), msgsSinceBot, send)
+	log.Printf("shouldSend, чат %d: %t", chatID, send)
 
 	return send, nil
 }

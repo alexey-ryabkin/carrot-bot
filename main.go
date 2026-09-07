@@ -22,12 +22,28 @@ func main() {
 	config := bot.Config{
 		DatabasePath:      "data/carrotbot.db",
 		LogPath:           "data/carrotbot.log",
-		QueueReadInterval: time.Second * 4,
-		SendCheckInterval: time.Second * 2,
+		QueueReadInterval: time.Second * 60,
+		SendCheckInterval: time.Second * 30,
 		ProbabilityParams: probabilityParams,
 		MinUserWeight:     10,
 		WeekWindow:        time.Hour * 24 * 7,
 	}
+	var testingProbabilityParams = probability.Params{
+		Lambda0:       100 / (3 * time.Second).Seconds(),
+		KMessages:     300,
+		TauSilence:    (6 * time.Second).Seconds(),
+		KUserMessages: 60,
+	}
+	testingConfig := bot.Config{
+		DatabasePath:      "data/carrotbot.db",
+		LogPath:           "data/carrotbot.log",
+		QueueReadInterval: time.Second * 4,
+		SendCheckInterval: time.Second * 2,
+		ProbabilityParams: testingProbabilityParams,
+		MinUserWeight:     10,
+		WeekWindow:        time.Hour * 24 * 7,
+	}
+	config = testingConfig
 
 	configMarkov := markov.Config{
 		DatabasePath: "data/markov.db",
