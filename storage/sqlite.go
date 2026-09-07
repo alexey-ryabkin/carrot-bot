@@ -2,6 +2,7 @@ package storage
 
 import (
 	"database/sql"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -75,6 +76,7 @@ func (s *SQLite) GetUsers(chatId int64) ([]int64, error) {
 }
 
 func (s *SQLite) Close() error {
+	log.Printf("закрытие базы данных")
 	return s.db.Close()
 }
 
@@ -89,14 +91,25 @@ func (s *SQLite) CleanOldMessages(d time.Duration) error {
 	}
 	defer tx.Rollback()
 
-	_, err = tx.Exec(`
+	res, err := tx.Exec(`
 		DELETE FROM messages
 		WHERE unixtime <= ?
 	`, cutoff)
 	if err != nil {
 		return err
 	}
-	return tx.Commit()
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	deleted, err := res.RowsAffected()
+	if err != nil {
+		log.Printf("удаление выполнено, но число затронутых строк недоступно: %v", err)
+		return nil
+	}
+	log.Printf("удалено старых сообщений: %d", deleted)
+	return nil
 }
 
 func (s *SQLite) SaveMessages(messages []model.Message) error {
@@ -128,6 +141,8 @@ func (s *SQLite) SaveMessages(messages []model.Message) error {
 	if err = tx.Commit(); err != nil {
 		return err
 	}
+
+	log.Printf("сохранено сообщений: %d", len(messages))
 	return nil
 
 }
@@ -135,6 +150,7 @@ func (s *SQLite) SaveMessages(messages []model.Message) error {
 // Создание и подключение
 
 func GetDB(path string) (*SQLite, error) {
+	log.Printf("открытие базы данных sqlite: %s", path)
 
 	var s *SQLite
 
@@ -165,6 +181,7 @@ func GetDB(path string) (*SQLite, error) {
 		return nil, err
 	}
 
+	log.Printf("база данных готова: %s", path)
 	return s, nil
 }
 

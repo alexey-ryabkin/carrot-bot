@@ -23,10 +23,10 @@ const (
 
 // Параметры модели вероятности по умолчанию.
 var defaultProbabilityParams = probability.Params{
-	Lambda0:        1.0 / (3 * time.Hour).Seconds(),
-	KMessages:      300,
-	TauSilence:     (6 * time.Hour).Seconds(),
-	KUserMessages:  60,
+	Lambda0:       1.0 / (3 * time.Hour).Seconds(),
+	KMessages:     300,
+	TauSilence:    (6 * time.Hour).Seconds(),
+	KUserMessages: 60,
 }
 
 // Sender регулярно проверяет каждый чат: не пора ли отправить сгенерированное
@@ -55,6 +55,9 @@ func NewSender(tele *tele.Bot, engine *markov.Engine, db *storage.SQLite, cfg Co
 		botID = tele.Me.ID
 	}
 
+	log.Printf("отправитель создан: checkInterval=%v minUserWeight=%v weekWindow=%v botID=%d params=%+v",
+		cfg.SendCheckInterval, cfg.MinUserWeight, cfg.WeekWindow, botID, cfg.ProbabilityParams)
+
 	return &Sender{
 		tele:   tele,
 		markov: engine,
@@ -71,6 +74,8 @@ func (s *Sender) Start() {
 	go func() {
 		defer close(s.done)
 
+		log.Printf("отправитель запущен, проверка каждые %v", s.cfg.SendCheckInterval)
+
 		ticker := time.NewTicker(s.cfg.SendCheckInterval)
 		defer ticker.Stop()
 
@@ -79,6 +84,7 @@ func (s *Sender) Start() {
 			case <-ticker.C:
 				s.check()
 			case <-s.stop:
+				log.Printf("отправитель остановлен")
 				return
 			}
 		}
@@ -87,6 +93,7 @@ func (s *Sender) Start() {
 
 // Close останавливает фоновую проверку и дожидается выхода из горутины.
 func (s *Sender) Close() {
+	log.Printf("закрытие отправителя")
 	close(s.stop)
 	<-s.done
 }
@@ -95,45 +102,57 @@ func (s *Sender) Close() {
 func (s *Sender) check() {
 	chats, err := s.db.GetChats()
 	if err != nil {
-		log.Printf("sender: get chats: %v", err)
+		log.Printf("ошибка получения списка чатов: %v", err)
 		return
 	}
+	log.Printf("проверка: %d известных чатов", len(chats))
 
+	sent := 0
 	for _, chatID := range chats {
-		s.maybeSend(chatID)
+		if s.maybeSend(chatID) {
+			sent++
+		}
 	}
+	log.Printf("проверка завершена: chats=%d sent=%d", len(chats), sent)
 }
 
-func (s *Sender) maybeSend(chatID int64) {
+func (s *Sender) maybeSend(chatID int64) bool {
 	now := time.Now()
 
 	ok, err := s.shouldSend(chatID, now)
 	if err != nil {
-		log.Printf("sender: shouldSend chat %d: %v", chatID, err)
-		return
+		log.Printf("shouldSend, чат %d: %v", chatID, err)
+		return false
 	}
 	if !ok {
-		return
+		return false
 	}
 
 	userID, err := s.pickUser(chatID, now)
-	if err != nil || userID == 0 {
-		log.Printf("sender: pickUser chat %d: %v", chatID, err)
-		return
+	if err != nil {
+		log.Printf("pickUser, чат %d: %v", chatID, err)
+		return false
+	}
+	if userID == 0 {
+		log.Printf("pickUser, чат %d: пользователь не выбран", chatID)
+		return false
 	}
 
 	text, err := s.markov.Generate(chatID, userID)
 	if err != nil {
-		log.Printf("sender: generate chat %d user %d: %v", chatID, userID, err)
-		return
+		log.Printf("генерация, чат %d, пользователь %d: %v", chatID, userID, err)
+		return false
 	}
 	if text == "" {
-		return
+		log.Printf("генерация, чат %d, пользователь %d: пустой текст, пропуск", chatID, userID)
+		return false
 	}
+	log.Printf("генерация, чат %d: текст (%d символов) для пользователя %d: %q",
+		chatID, len(text), userID, logText(text))
 
 	if err := s.send(chatID, text); err != nil {
-		log.Printf("sender: send chat %d: %v", chatID, err)
-		return
+		log.Printf("отправка в чат %d: %v", chatID, err)
+		return false
 	}
 
 	if err := s.db.SaveMessages([]model.Message{{
@@ -141,13 +160,20 @@ func (s *Sender) maybeSend(chatID int64) {
 		UserId:   s.botID,
 		UnixTime: now.Unix(),
 	}}); err != nil {
-		log.Printf("sender: save bot message chat %d: %v", chatID, err)
+		log.Printf("сохранение сообщения бота, чат %d: %v", chatID, err)
+	} else {
+		log.Printf("чат %d: сообщение бота сохранено в кэш активности", chatID)
 	}
+	return true
 }
 
 func (s *Sender) send(chatID int64, text string) error {
-	_, err := s.tele.Send(&tele.Chat{ID: chatID}, text)
-	return err
+	msg, err := s.tele.Send(&tele.Chat{ID: chatID}, text)
+	if err != nil {
+		return err
+	}
+	log.Printf("чат %d: сообщение отправлено, msgid=%d", chatID, msg.ID)
+	return nil
 }
 
 // shouldSend решает, пора ли отправить сообщение в чат.
@@ -163,7 +189,7 @@ func (s *Sender) shouldSend(chatID int64, now time.Time) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	silence := now.Unix() - lastActivity
+	silence := time.Duration(now.Unix()-lastActivity) * time.Second
 
 	// Последнее сообщение бота берём из общего кэша по userId бота.
 	lastBot, err := s.db.GetLastActivityUser(chatID, s.botID)
@@ -175,13 +201,20 @@ func (s *Sender) shouldSend(chatID int64, now time.Time) (bool, error) {
 		return false, err
 	}
 
-	return probability.ShouldSend(
+	pSend := probability.Probability(
 		weekCount,
-		time.Duration(silence),
+		silence.Seconds(),
 		msgsSinceBot,
-		s.cfg.SendCheckInterval,
+		s.cfg.SendCheckInterval.Seconds(),
 		s.cfg.ProbabilityParams,
-	), nil
+	)
+	roll := rand.Float64()
+	decision := roll < pSend
+
+	log.Printf("shouldSend, чат %d: weekMessages=%d silence=%s msgsSinceBot=%d p=%.6f roll=%.6f decision=%t",
+		chatID, weekCount, silence.Round(time.Second), msgsSinceBot, pSend, roll, decision)
+
+	return decision, nil
 }
 
 // pickUser выбирает автора будущего сообщения пропорционально его активности
@@ -213,10 +246,14 @@ func (s *Sender) pickUser(chatID int64, now time.Time) (int64, error) {
 	}
 
 	if len(ids) == 0 {
+		log.Printf("pickUser, чат %d: нет кандидатов (пользователей в чате: %d)", chatID, len(users))
 		return 0, nil
 	}
 
-	return ids[weightedIndex(weights, total)], nil
+	idx := weightedIndex(weights, total)
+	log.Printf("pickUser, чат %d: candidates=%d weightsTotal=%.1f chosen=%d",
+		chatID, len(ids), total, ids[idx])
+	return ids[idx], nil
 }
 
 // weightedIndex возвращает индекс по взвешенному распределению [0, total).

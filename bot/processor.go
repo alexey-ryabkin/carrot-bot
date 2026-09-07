@@ -16,7 +16,7 @@ type Processor struct {
 	mu       sync.Mutex
 	messages []*tele.Message
 	markov   *markov.Engine
-	db		 *storage.SQLite
+	db       *storage.SQLite
 
 	stop chan struct{}
 	done chan struct{}
@@ -33,14 +33,28 @@ func NewProcessor(engine *markov.Engine, db *storage.SQLite) *Processor {
 }
 
 func (p *Processor) Add(message *tele.Message) {
+	if message == nil {
+		log.Printf("Add(nil) проигнорировано")
+		return
+	}
+
 	p.mu.Lock()
 	p.messages = append(p.messages, message)
+	queued := len(p.messages)
 	p.mu.Unlock()
+
+	if message.Chat != nil {
+		log.Printf("сообщение поставлено в очередь: chat=%d msgid=%d queue=%d", message.Chat.ID, message.ID, queued)
+	} else {
+		log.Printf("сообщение поставлено в очередь без чата: msgid=%d queue=%d", message.ID, queued)
+	}
 }
 
 func (p *Processor) Start() {
 	go func() {
 		defer close(p.done)
+
+		log.Printf("процессор запущен, сброс каждые 30 с")
 
 		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
@@ -51,7 +65,9 @@ func (p *Processor) Start() {
 				p.process()
 
 			case <-p.stop:
+				log.Printf("получен сигнал остановки, сбрасываю оставшиеся сообщения")
 				p.process()
+				log.Printf("процессор остановлен")
 				return
 			}
 		}
@@ -62,8 +78,10 @@ func (p *Processor) process() {
 	messages := p.take()
 
 	if len(messages) == 0 {
+		log.Printf("тик: очередь пуста")
 		return
 	}
+	log.Printf("тик: обработка %d сообщений из очереди", len(messages))
 
 	// Обучение
 	p.learn(messages)
@@ -93,20 +111,26 @@ func (p *Processor) learn(messages []*tele.Message) {
 		})
 	}
 
+	log.Printf("обучение: batch=%d usable=%d пропущено=%d (нет отправителя)",
+		len(messages), len(carrotMessages), len(messages)-len(carrotMessages))
+
 	err := p.markov.LearnMany(markovMessages)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("ошибка обучения (LearnMany, %d сообщений): %v", len(markovMessages), err)
 	}
+	log.Printf("марковская цепь обучена на %d сообщениях", len(markovMessages))
 
 	err = p.db.SaveMessages(carrotMessages)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("ошибка сохранения (SaveMessages, %d сообщений): %v", len(carrotMessages), err)
 	}
+	log.Printf("в кэш активности сохранено %d сообщений", len(carrotMessages))
 
 	err = p.db.CleanOldMessages(time.Hour * 24 * 7)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("ошибка очистки старых сообщений (CleanOldMessages): %v", err)
 	}
+	log.Printf("кэш активности очищен от старых сообщений")
 }
 
 func (p *Processor) take() []*tele.Message {
@@ -124,6 +148,7 @@ func (p *Processor) take() []*tele.Message {
 }
 
 func (p *Processor) Close() {
+	log.Printf("закрытие процессора")
 	close(p.stop)
 	<-p.done
 }
