@@ -5,15 +5,28 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/alexey-ryabkin/carrot-bot/bot"
+	"github.com/alexey-ryabkin/carrot-bot/probability"
 	"github.com/alexey-ryabkin/markov-module"
 )
 
 func main() {
+	var probabilityParams = probability.Params{
+		Lambda0:       1.0 / (3 * time.Hour).Seconds(),
+		KMessages:     300,
+		TauSilence:    (6 * time.Hour).Seconds(),
+		KUserMessages: 60,
+	}
 	config := bot.Config{
-		DatabasePath: "data/carrotbot.db",
-		LogPath:      "data/carrotbot.log",
+		DatabasePath:      "data/carrotbot.db",
+		LogPath:           "data/carrotbot.log",
+		QueueReadInterval: time.Second * 4,
+		SendCheckInterval: time.Second * 2,
+		ProbabilityParams: probabilityParams,
+		MinUserWeight:     10,
+		WeekWindow:        time.Hour * 24 * 7,
 	}
 
 	configMarkov := markov.Config{
@@ -43,11 +56,15 @@ func main() {
 	}
 	log.Printf("бот создан")
 
-	b.Start()
-	log.Printf("бот запущен, ожидание SIGINT/SIGTERM")
-
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	log.Printf("бот запущен, ожидание SIGINT/SIGTERM")
+
+	stopped := make(chan struct{})
+	go func() {
+		b.Start()
+		close(stopped)
+	}()
 
 	received := <-sig
 	log.Printf("получен сигнал: %v", received)
@@ -55,5 +72,7 @@ func main() {
 	if err := b.Terminate(); err != nil {
 		log.Printf("ошибка завершения: %v", err)
 	}
+
+	<-stopped
 	log.Printf("работа завершена")
 }

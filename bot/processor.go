@@ -17,18 +17,20 @@ type Processor struct {
 	messages []*tele.Message
 	markov   *markov.Engine
 	db       *storage.SQLite
+	cfg      Config
 
 	stop chan struct{}
 	done chan struct{}
 }
 
-func NewProcessor(engine *markov.Engine, db *storage.SQLite) *Processor {
+func NewProcessor(engine *markov.Engine, db *storage.SQLite, cfg Config) *Processor {
 	return &Processor{
 		messages: make([]*tele.Message, 0),
 		stop:     make(chan struct{}),
 		done:     make(chan struct{}),
 		markov:   engine,
 		db:       db,
+		cfg:      cfg,
 	}
 }
 
@@ -54,9 +56,9 @@ func (p *Processor) Start() {
 	go func() {
 		defer close(p.done)
 
-		log.Printf("процессор запущен, сброс каждые 30 с")
+		log.Printf("процессор запущен, сброс каждые %.1f с", p.cfg.QueueReadInterval.Seconds())
 
-		ticker := time.NewTicker(30 * time.Second)
+		ticker := time.NewTicker(p.cfg.QueueReadInterval)
 		defer ticker.Stop()
 
 		for {

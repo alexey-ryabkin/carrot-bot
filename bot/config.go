@@ -10,6 +10,8 @@ type Config struct {
 	DatabasePath string
 	LogPath      string
 
+	QueueReadInterval time.Duration
+
 	// Настройки регулярной проверки отправки сообщений.
 	SendCheckInterval time.Duration      // период проверки чатов
 	ProbabilityParams probability.Params // параметры модели вероятности

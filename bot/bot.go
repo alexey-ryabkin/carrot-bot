@@ -42,7 +42,7 @@ func New(cfg Config, engine *markov.Engine) (*Bot, error) {
 
 	bot := &Bot{
 		TeleBot:      b,
-		MyProcessor:  NewProcessor(engine, db),
+		MyProcessor:  NewProcessor(engine, db, cfg),
 		Sender:       NewSender(b, engine, db, cfg),
 		MarkovEngine: engine,
 		db:           db,
