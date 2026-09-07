@@ -8,6 +8,7 @@ import (
 
 type Config struct {
 	DatabasePath string
+	LogPath      string
 
 	// Настройки регулярной проверки отправки сообщений.
 	SendCheckInterval time.Duration      // период проверки чатов

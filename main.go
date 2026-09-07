@@ -11,14 +11,21 @@ import (
 )
 
 func main() {
-	config := bot.Config {
+	config := bot.Config{
 		DatabasePath: "data/carrotbot.db",
+		LogPath:      "data/carrotbot.log",
 	}
 
-	configMarkov := markov.Config {
-		DatabasePath:         "data/markov.db",
-		Order:                3,
+	configMarkov := markov.Config{
+		DatabasePath: "data/markov.db",
+		Order:        3,
 	}
+
+	closeLogger, err := InitLogger(config.LogPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer closeLogger()
 
 	markov, err := markov.New(configMarkov)
 	if err != nil {
