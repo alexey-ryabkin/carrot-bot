@@ -14,7 +14,7 @@ import (
 
 func main() {
 	var probabilityParams = probability.Params{
-		Lambda0:       1.0 / (3 * time.Hour).Seconds(),
+		Lambda0:       1.0 / (3 * time.Minute).Seconds(),
 		KMessages:     300,
 		TauSilence:    (6 * time.Hour).Seconds(),
 		KUserMessages: 60,
