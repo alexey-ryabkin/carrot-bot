@@ -88,8 +88,6 @@ func (p *Processor) process() {
 	// Обучение
 	p.learn(messages)
 
-	// Генерация
-
 }
 
 func (p *Processor) learn(messages []*tele.Message) {

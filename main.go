@@ -52,6 +52,11 @@ func main() {
 		Order:        3,
 	}
 
+	if len(os.Args) > 1 {
+		importHistory(os.Args[1], config, configMarkov)
+		return
+	}
+
 	closeLogger, err := InitLogger(config.LogPath)
 	if err != nil {
 		log.Fatal(err)
