@@ -141,6 +141,35 @@ func (s *SQLite) GetUser(id int64) (model.User, error) {
 	return user, err
 }
 
+func (s *SQLite) UpsertChat(chat model.Chat) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec(`
+		INSERT INTO chats (id, type, title, username)
+		VALUES (?, ?, ?, ?)
+		ON CONFLICT(id) DO UPDATE SET
+			type = excluded.type,
+			title = excluded.title,
+			username = excluded.username
+	`, chat.ID, chat.Type, chat.Title, chat.Username)
+
+	return tx.Commit()
+}
+
+func (s *SQLite) GetChat(id int64) (model.Chat, error) {
+	var chat model.Chat
+	err := s.db.QueryRow(`
+		SELECT id, type, title, username
+		FROM chats
+		WHERE id = ?
+	`, id).Scan(&chat.ID, &chat.Type, &chat.Title, &chat.Username)
+	return chat, err
+}
+
 func (s *SQLite) SaveMessages(messages []model.Message) error {
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -243,6 +272,15 @@ func (s *SQLite) initialize() error {
 			id INTEGER PRIMARY KEY,
 			firstName TEXT NOT NULL DEFAULT '',
 			lastName TEXT NOT NULL DEFAULT '',
+			username TEXT NOT NULL DEFAULT ''
+		)
+		`,
+
+		`
+		CREATE TABLE IF NOT EXISTS chats (
+			id INTEGER PRIMARY KEY,
+			type TEXT NOT NULL DEFAULT '',
+			title TEXT NOT NULL DEFAULT '',
 			username TEXT NOT NULL DEFAULT ''
 		)
 		`,

@@ -40,3 +40,18 @@ func labelStoredUser(u model.User) string {
 	return fmt.Sprintf("id=%d firstName=%q lastName=%q username=%q",
 		u.ID, u.FirstName, u.LastName, u.Username)
 }
+
+// labelChat описывает чат для логов.
+func labelChat(c *tele.Chat) string {
+	if c == nil {
+		return "unknown"
+	}
+	return fmt.Sprintf("id=%d type=%s title=%q username=%q",
+		c.ID, c.Type, c.Title, c.Username)
+}
+
+// labelStoredChat описывает чат из базы для логов.
+func labelStoredChat(c model.Chat) string {
+	return fmt.Sprintf("id=%d type=%s title=%q username=%q",
+		c.ID, c.Type, c.Title, c.Username)
+}

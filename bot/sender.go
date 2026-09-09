@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
 	"time"
@@ -95,12 +96,21 @@ func (s *Sender) check() {
 	log.Printf("проверка завершена: chats=%d sent=%d", len(chats), sent)
 }
 
+// chatLabel возвращает название чата из базы для логов.
+func (s *Sender) chatLabel(chatID int64) string {
+	chat, err := s.db.GetChat(chatID)
+	if err != nil {
+		return fmt.Sprintf("id=%d (данные чата не найдены)", chatID)
+	}
+	return labelStoredChat(chat)
+}
+
 func (s *Sender) maybeSend(chatID int64) bool {
 	now := time.Now()
 
 	ok, err := s.shouldSend(chatID, now)
 	if err != nil {
-		log.Printf("shouldSend, чат %d: %v", chatID, err)
+		log.Printf("shouldSend, чат %s: %v", s.chatLabel(chatID), err)
 		return false
 	}
 	if !ok {
@@ -109,28 +119,28 @@ func (s *Sender) maybeSend(chatID int64) bool {
 
 	userID, err := s.pickUser(chatID, now)
 	if err != nil {
-		log.Printf("pickUser, чат %d: %v", chatID, err)
+		log.Printf("pickUser, чат %s: %v", s.chatLabel(chatID), err)
 		return false
 	}
 	if userID == 0 {
-		log.Printf("pickUser, чат %d: пользователь не выбран", chatID)
+		log.Printf("pickUser, чат %s: пользователь не выбран", s.chatLabel(chatID))
 		return false
 	}
 
 	text, err := s.markov.Generate(chatID, userID)
 	if err != nil {
-		log.Printf("генерация, чат %d, пользователь %d: %v", chatID, userID, err)
+		log.Printf("генерация, чат %s, пользователь %d: %v", s.chatLabel(chatID), userID, err)
 		return false
 	}
 	if text == "" {
-		log.Printf("генерация, чат %d, пользователь %d: пустой текст, пропуск", chatID, userID)
+		log.Printf("генерация, чат %s, пользователь %d: пустой текст, пропуск", s.chatLabel(chatID), userID)
 		return false
 	}
-	log.Printf("генерация, чат %d: текст (%d символов) для пользователя %d: %q",
-		chatID, len(text), userID, logText(text))
+	log.Printf("генерация, чат %s: текст (%d символов) для пользователя %d: %q",
+		s.chatLabel(chatID), len(text), userID, logText(text))
 
 	if err := s.send(chatID, text); err != nil {
-		log.Printf("отправка в чат %d: %v", chatID, err)
+		log.Printf("отправка в чат %s: %v", s.chatLabel(chatID), err)
 		return false
 	}
 
@@ -139,9 +149,9 @@ func (s *Sender) maybeSend(chatID int64) bool {
 		UserId:   s.botID,
 		UnixTime: now.Unix(),
 	}}); err != nil {
-		log.Printf("сохранение сообщения бота, чат %d: %v", chatID, err)
+		log.Printf("сохранение сообщения бота, чат %s: %v", s.chatLabel(chatID), err)
 	} else {
-		log.Printf("чат %d: сообщение бота сохранено в кэш активности", chatID)
+		log.Printf("чат %s: сообщение бота сохранено в кэш активности", s.chatLabel(chatID))
 	}
 	return true
 }
@@ -151,7 +161,7 @@ func (s *Sender) send(chatID int64, text string) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("чат %d: сообщение отправлено, msgid=%d", chatID, msg.ID)
+	log.Printf("чат %s: сообщение отправлено, msgid=%d", s.chatLabel(chatID), msg.ID)
 	return nil
 }
 
@@ -186,8 +196,8 @@ func (s *Sender) shouldSend(chatID int64, now time.Time) (bool, error) {
 		s.cfg.SendCheckInterval,
 		s.cfg.ProbabilityParams,
 	)
-	log.Printf("shouldSend, чат %d: localCount=%d weekCount=%d sinceBotCount=%d localWindow=%v → %t",
-		chatID, localCount, weekCount, sinceBotCount, localWindow, send)
+	log.Printf("shouldSend, чат %s: localCount=%d weekCount=%d sinceBotCount=%d localWindow=%v → %t",
+		s.chatLabel(chatID), localCount, weekCount, sinceBotCount, localWindow, send)
 
 	return send, nil
 }
@@ -215,7 +225,7 @@ func (s *Sender) pickUser(chatID int64, now time.Time) (int64, error) {
 	}
 
 	if len(ids) == 0 {
-		log.Printf("pickUser, чат %d: нет кандидатов (пользователей в чате: %d)", chatID, len(users))
+		log.Printf("pickUser, чат %s: нет кандидатов (пользователей в чате: %d)", s.chatLabel(chatID), len(users))
 		return 0, nil
 	}
 
@@ -224,11 +234,11 @@ func (s *Sender) pickUser(chatID int64, now time.Time) (int64, error) {
 	chosen := ids[idx]
 	storedUser, err := s.db.GetUser(chosen)
 	if err != nil {
-		log.Printf("pickUser, чат %d: candidates=%d weightsTotal=%.1f chosen=id=%d (данные пользователя не найдены: %v)",
-			chatID, len(ids), total, chosen, err)
+		log.Printf("pickUser, чат %s: candidates=%d weightsTotal=%.1f chosen=id=%d (данные пользователя не найдены: %v)",
+			s.chatLabel(chatID), len(ids), total, chosen, err)
 	} else {
-		log.Printf("pickUser, чат %d: candidates=%d weightsTotal=%.1f chosen=%s",
-			chatID, len(ids), total, labelStoredUser(storedUser))
+		log.Printf("pickUser, чат %s: candidates=%d weightsTotal=%.1f chosen=%s",
+			s.chatLabel(chatID), len(ids), total, labelStoredUser(storedUser))
 	}
 	return chosen, nil
 }

@@ -46,7 +46,7 @@ func (p *Processor) Add(message *tele.Message) {
 	p.mu.Unlock()
 
 	if message.Chat != nil {
-		log.Printf("сообщение поставлено в очередь: chat=%d msgid=%d queue=%d", message.Chat.ID, message.ID, queued)
+		log.Printf("сообщение поставлено в очередь: %s msgid=%d queue=%d", labelChat(message.Chat), message.ID, queued)
 	} else {
 		log.Printf("сообщение поставлено в очередь без чата: msgid=%d queue=%d", message.ID, queued)
 	}
