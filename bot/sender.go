@@ -34,8 +34,8 @@ func NewSender(tele *tele.Bot, engine *markov.Engine, db *storage.SQLite, cfg Co
 		botID = tele.Me.ID
 	}
 
-	log.Printf("отправитель создан: checkInterval=%v minUserWeight=%v weekWindow=%v botID=%d params=%+v",
-		cfg.SendCheckInterval, cfg.MinUserWeight, cfg.WeekWindow, botID, cfg.ProbabilityParams)
+	log.Printf("отправитель создан: checkInterval=%v minUserWeight=%v globalWindow=%v botID=%d params=%+v",
+		cfg.SendCheckInterval, cfg.MinUserWeight, cfg.GlobalWindow, botID, cfg.ProbabilityParams)
 
 	return &Sender{
 		tele:   tele,
@@ -163,7 +163,16 @@ func (s *Sender) shouldSend(chatID int64, now time.Time) (bool, error) {
 		return false, err
 	}
 
-	weekCount, err := s.db.CountMessagesPeople(chatID, s.botID, now.Add(-s.cfg.WeekWindow).Unix())
+	weekCount, err := s.db.CountMessagesPeople(chatID, s.botID, now.Add(-s.cfg.GlobalWindow).Unix())
+	if err != nil {
+		return false, err
+	}
+
+	lastBotTime, err := s.db.GetLastActivityUser(chatID, s.botID)
+	if err != nil {
+		return false, err
+	}
+	sinceBotCount, err := s.db.CountMessagesPeople(chatID, s.botID, lastBotTime)
 	if err != nil {
 		return false, err
 	}
@@ -171,12 +180,14 @@ func (s *Sender) shouldSend(chatID int64, now time.Time) (bool, error) {
 	send := probability.ShouldSend(
 		localCount,
 		weekCount,
+		sinceBotCount,
 		localWindow,
+		s.cfg.GlobalWindow,
 		s.cfg.SendCheckInterval,
 		s.cfg.ProbabilityParams,
 	)
-	log.Printf("shouldSend, чат %d: localCount=%d weekCount=%d localWindow=%d → %t",
-		chatID, localCount, weekCount, localWindow, send)
+	log.Printf("shouldSend, чат %d: localCount=%d weekCount=%d sinceBotCount=%d localWindow=%v → %t",
+		chatID, localCount, weekCount, sinceBotCount, localWindow, send)
 
 	return send, nil
 }
@@ -190,7 +201,7 @@ func (s *Sender) pickUser(chatID int64, now time.Time) (int64, error) {
 		return 0, err
 	}
 
-	windowStart := now.Add(-s.cfg.WeekWindow).Unix()
+	windowStart := now.Add(-s.cfg.GlobalWindow).Unix()
 	ids := make([]int64, 0, len(users))
 	weights := make([]float64, 0, len(users))
 	var total float64

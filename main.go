@@ -14,9 +14,10 @@ import (
 
 func main() {
 	var probabilityParams = probability.Params{
-		BotMessageRatio: 0.05,
-		InitiativeRate:  1.5 / (8 * time.Hour).Seconds(),
-		TargetWeekRate:  0.05 / 60,
+		BotMessageRatio:  0.05,
+		InitiativeRate:   1.5 / (8 * time.Hour).Seconds(),
+		TargetWeekRate:   0.05 / 60,
+		CooldownMessages: 5,
 	}
 	config := bot.Config{
 		DatabasePath:       "data/carrotbot.db",
@@ -26,21 +27,23 @@ func main() {
 		MinumumlocalWindow: time.Minute * 2,
 		ProbabilityParams:  probabilityParams,
 		MinUserWeight:      10,
-		WeekWindow:         time.Hour * 24 * 7,
+		GlobalWindow:       time.Hour * 24 * 7,
 	}
 	var testingProbabilityParams = probability.Params{
-		BotMessageRatio: 0.5,
-		InitiativeRate:  1.0 / (30 * time.Second).Seconds(),
-		TargetWeekRate:  0.05 / 60,
+		BotMessageRatio:  0.5,
+		InitiativeRate:   1.0 / (30 * time.Second).Seconds(),
+		TargetWeekRate:   0.05 / 60,
+		CooldownMessages: 5,
 	}
 	testingConfig := bot.Config{
-		DatabasePath:      "data/carrotbot.db",
-		LogPath:           "data/carrotbot.log",
-		QueueReadInterval: time.Second * 4,
-		SendCheckInterval: time.Second * 2,
-		ProbabilityParams: testingProbabilityParams,
-		MinUserWeight:     10,
-		WeekWindow:        time.Hour * 24 * 7,
+		DatabasePath:       "data/carrotbot.db",
+		LogPath:            "data/carrotbot.log",
+		QueueReadInterval:  time.Second * 4,
+		SendCheckInterval:  time.Second * 2,
+		MinumumlocalWindow: time.Minute * 2,
+		ProbabilityParams:  testingProbabilityParams,
+		MinUserWeight:      10,
+		GlobalWindow:       time.Hour * 24 * 7,
 	}
 	config = testingConfig
 

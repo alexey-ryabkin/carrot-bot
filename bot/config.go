@@ -16,6 +16,5 @@ type Config struct {
 	MinumumlocalWindow time.Duration
 	GlobalWindow time.Duration
 	ProbabilityParams probability.Params 
-	MinUserWeight     float64            
-	WeekWindow        time.Duration      
+	MinUserWeight     float64
 }
