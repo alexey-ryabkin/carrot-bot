@@ -112,6 +112,25 @@ func (s *SQLite) CleanOldMessages(d time.Duration) error {
 	return nil
 }
 
+func (s *SQLite) UpsertUser(user model.User) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec(`
+		INSERT INTO users (id, firstName, lastName, username)
+		VALUES (?, ?, ?, ?)
+		ON CONFLICT(id) DO UPDATE SET
+			firstName = excluded.firstName,
+			lastName = excluded.lastName,
+			username = excluded.username
+	`, user.ID, user.FirstName, user.LastName, user.Username)
+
+	return tx.Commit();
+}
+
 func (s *SQLite) SaveMessages(messages []model.Message) error {
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -207,6 +226,15 @@ func (s *SQLite) initialize() error {
 		`
 		CREATE INDEX IF NOT EXISTS idx_messages_chat_user
 		ON messages(chatId, userId, unixtime)
+		`,
+
+		`
+		CREATE TABLE IF NOT EXISTS users (
+			id INTEGER PRIMARY KEY,
+			firstName TEXT NOT NULL DEFAULT '',
+			lastName TEXT NOT NULL DEFAULT '',
+			username TEXT NOT NULL DEFAULT ''
+		)
 		`,
 	}
 

@@ -192,9 +192,6 @@ func (s *Sender) shouldSend(chatID int64, now time.Time) (bool, error) {
 	return send, nil
 }
 
-// pickUser выбирает автора будущего сообщения пропорционально его активности
-// за неделю, но с минимальным весом для всех участников чата. Сам бот
-// исключается — он лишь подражает людям.
 func (s *Sender) pickUser(chatID int64, now time.Time) (int64, error) {
 	users, err := s.db.GetUsers(chatID)
 	if err != nil {

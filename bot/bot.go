@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/alexey-ryabkin/carrot-bot/model"
 	"github.com/alexey-ryabkin/carrot-bot/storage"
 	"github.com/alexey-ryabkin/markov-module"
 	tele "gopkg.in/telebot.v4"
@@ -81,6 +82,17 @@ func (b *Bot) text(c tele.Context) error {
 	if message == nil {
 		log.Printf("OnText вызван без сообщения")
 		return errors.New("No message in OnText")
+	}
+
+	if message.Sender != nil {
+		if err := b.db.UpsertUser(model.User{
+			ID:        message.Sender.ID,
+			FirstName: message.Sender.FirstName,
+			LastName:  message.Sender.LastName,
+			Username:  message.Sender.Username,
+		}); err != nil {
+			log.Printf("сохранение пользователя в базу: %v", err)
+		}
 	}
 
 	if message.Chat != nil {

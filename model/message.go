@@ -5,3 +5,10 @@ type Message struct {
 	UserId   int64
 	UnixTime int64
 }
+
+type User struct {
+	ID        int64
+	FirstName string
+	LastName  string
+	Username  string
+}

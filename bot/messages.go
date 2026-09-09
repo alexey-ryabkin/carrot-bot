@@ -25,22 +25,11 @@ func logText(text string) string {
 	return text
 }
 
-// labelUser описывает пользователя для логов в виде "id (имя)".
+// labelUser описывает пользователя для логов: id, имя, фамилия, юзернейм.
 func labelUser(u *tele.User) string {
 	if u == nil {
 		return "unknown"
 	}
-
-	name := ""
-	switch {
-	case u.Username != "":
-		name = "@" + u.Username
-	case u.FirstName != "" || u.LastName != "":
-		name = strings.TrimSpace(u.FirstName + " " + u.LastName)
-	}
-
-	if name == "" {
-		return fmt.Sprintf("%d", u.ID)
-	}
-	return fmt.Sprintf("%d (%s)", u.ID, name)
+	return fmt.Sprintf("id=%d firstName=%q lastName=%q username=%q",
+		u.ID, u.FirstName, u.LastName, u.Username)
 }
