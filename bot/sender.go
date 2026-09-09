@@ -14,7 +14,7 @@ import (
 
 // ---- Sender: регулярная проверка, нужно ли отправить сообщение ----
 
-// Sender регулярно проверяет каждый чат: не пора ли отправить сгенерированное сообщение. 
+// Sender регулярно проверяет каждый чат: не пора ли отправить сгенерированное сообщение.
 type Sender struct {
 	tele   *tele.Bot
 	markov *markov.Engine
@@ -220,9 +220,17 @@ func (s *Sender) pickUser(chatID int64, now time.Time) (int64, error) {
 	}
 
 	idx := weightedIndex(weights, total)
-	log.Printf("pickUser, чат %d: candidates=%d weightsTotal=%.1f chosen=%d",
-		chatID, len(ids), total, ids[idx])
-	return ids[idx], nil
+
+	chosen := ids[idx]
+	storedUser, err := s.db.GetUser(chosen)
+	if err != nil {
+		log.Printf("pickUser, чат %d: candidates=%d weightsTotal=%.1f chosen=id=%d (данные пользователя не найдены: %v)",
+			chatID, len(ids), total, chosen, err)
+	} else {
+		log.Printf("pickUser, чат %d: candidates=%d weightsTotal=%.1f chosen=%s",
+			chatID, len(ids), total, labelStoredUser(storedUser))
+	}
+	return chosen, nil
 }
 
 func (s *Sender) LocalWindow(checkInterval time.Duration) time.Duration {

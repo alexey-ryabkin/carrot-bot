@@ -5,6 +5,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/alexey-ryabkin/carrot-bot/model"
 	tele "gopkg.in/telebot.v4"
 )
 
@@ -30,6 +31,12 @@ func labelUser(u *tele.User) string {
 	if u == nil {
 		return "unknown"
 	}
+	return fmt.Sprintf("id=%d firstName=%q lastName=%q username=%q",
+		u.ID, u.FirstName, u.LastName, u.Username)
+}
+
+// labelStoredUser описывает пользователя из базы для логов.
+func labelStoredUser(u model.User) string {
 	return fmt.Sprintf("id=%d firstName=%q lastName=%q username=%q",
 		u.ID, u.FirstName, u.LastName, u.Username)
 }

@@ -128,7 +128,17 @@ func (s *SQLite) UpsertUser(user model.User) error {
 			username = excluded.username
 	`, user.ID, user.FirstName, user.LastName, user.Username)
 
-	return tx.Commit();
+	return tx.Commit()
+}
+
+func (s *SQLite) GetUser(id int64) (model.User, error) {
+	var user model.User
+	err := s.db.QueryRow(`
+		SELECT id, firstName, lastName, username
+		FROM users
+		WHERE id = ?
+	`, id).Scan(&user.ID, &user.FirstName, &user.LastName, &user.Username)
+	return user, err
 }
 
 func (s *SQLite) SaveMessages(messages []model.Message) error {
