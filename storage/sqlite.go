@@ -298,6 +298,15 @@ func (s *SQLite) initialize() error {
 		}
 	}
 
+	_, err = tx.Exec(`
+		INSERT INTO metadata (id, userVersion)
+		VALUES (1, 1)
+		ON CONFLICT (id) DO NOTHING;
+	`)
+	if err != nil {
+		return err
+	}
+
 	if err = tx.Commit(); err != nil {
 		return err
 	}
