@@ -264,6 +264,27 @@ func (s *SQLite) CountMessagesChat(chatId int64, unixtime int64) (int, error) {
 	return count, err
 }
 
+// CountMessagesPeople считает сообщения людей в чате за период от unixtime,
+// исключая заданного пользователя (например, самого бота, чьи сообщения
+// тоже пишутся в кэш активности).
+func (s *SQLite) CountMessagesPeople(chatId int64, excludeUserId int64, unixtime int64) (int, error) {
+	var count int
+
+	err := s.db.QueryRow(`
+		SELECT COUNT(*)
+		FROM messages
+		WHERE chatId = ?
+		  AND userId <> ?
+		  AND unixtime >= ?
+	`,
+		chatId,
+		excludeUserId,
+		unixtime,
+	).Scan(&count)
+
+	return count, err
+}
+
 func (s *SQLite) GetLastActivityChat(chatId int64) (unixtime int64, err error) {
 	err = s.db.QueryRow(`
 		SELECT COALESCE(MAX(unixtime), 0)

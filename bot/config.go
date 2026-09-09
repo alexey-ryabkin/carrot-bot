@@ -12,9 +12,10 @@ type Config struct {
 
 	QueueReadInterval time.Duration
 
-	// Настройки регулярной проверки отправки сообщений.
-	SendCheckInterval time.Duration      // период проверки чатов
-	ProbabilityParams probability.Params // параметры модели вероятности
-	MinUserWeight     float64            // минимальный вес пользователя при выборе
-	WeekWindow        time.Duration      // окно активности (по плану — неделя)
+	SendCheckInterval time.Duration      
+	MinumumlocalWindow time.Duration
+	GlobalWindow time.Duration
+	ProbabilityParams probability.Params 
+	MinUserWeight     float64            
+	WeekWindow        time.Duration      
 }

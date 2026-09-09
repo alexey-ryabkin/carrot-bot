@@ -128,7 +128,7 @@ func (p *Processor) learn(messages []*tele.Message) {
 	}
 	log.Printf("в кэш активности сохранено %d сообщений", len(carrotMessages))
 
-	err = p.db.CleanOldMessages(time.Hour * 24 * 7)
+	err = p.db.CleanOldMessages(p.cfg.WeekWindow)
 	if err != nil {
 		log.Fatalf("ошибка очистки старых сообщений (CleanOldMessages): %v", err)
 	}

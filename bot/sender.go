@@ -14,26 +14,7 @@ import (
 
 // ---- Sender: регулярная проверка, нужно ли отправить сообщение ----
 
-// Значения по умолчанию (если не заданы в Config).
-const (
-	defaultCheckInterval = time.Minute
-	defaultMinUserWeight = 10
-	defaultWeekWindow    = time.Hour * 24 * 7
-)
-
-// Параметры модели вероятности по умолчанию.
-var defaultProbabilityParams = probability.Params{
-	Lambda0:       1.0 / (3 * time.Hour).Seconds(),
-	KMessages:     300,
-	TauSilence:    (6 * time.Hour).Seconds(),
-	KUserMessages: 60,
-}
-
-// Sender регулярно проверяет каждый чат: не пора ли отправить сгенерированное
-// сообщение. Шанс отправки зависит от трёх пропорциональных факторов:
-//   - числа сообщений в чате за окно активности (неделя);
-//   - времени молчания с последнего сообщения;
-//   - числа сообщений с последнего сообщения бота.
+// Sender регулярно проверяет каждый чат: не пора ли отправить сгенерированное сообщение. 
 type Sender struct {
 	tele   *tele.Bot
 	markov *markov.Engine
@@ -48,8 +29,6 @@ type Sender struct {
 }
 
 func NewSender(tele *tele.Bot, engine *markov.Engine, db *storage.SQLite, cfg Config) *Sender {
-	applyDefaults(&cfg)
-
 	var botID int64
 	if tele.Me != nil {
 		botID = tele.Me.ID
@@ -178,37 +157,26 @@ func (s *Sender) send(chatID int64, text string) error {
 
 // shouldSend решает, пора ли отправить сообщение в чат.
 func (s *Sender) shouldSend(chatID int64, now time.Time) (bool, error) {
-	windowStart := now.Add(-s.cfg.WeekWindow).Unix()
-
-	weekCount, err := s.db.CountMessagesChat(chatID, windowStart)
+	localWindow := s.LocalWindow(s.cfg.SendCheckInterval)
+	localCount, err := s.db.CountMessagesPeople(chatID, s.botID, now.Add(-localWindow).Unix())
 	if err != nil {
 		return false, err
 	}
 
-	lastActivity, err := s.db.GetLastActivityChat(chatID)
-	if err != nil {
-		return false, err
-	}
-	silence := time.Duration(now.Unix()-lastActivity) * time.Second
-
-	// Последнее сообщение бота берём из общего кэша по userId бота.
-	lastBot, err := s.db.GetLastActivityUser(chatID, s.botID)
-	if err != nil {
-		return false, err
-	}
-	msgsSinceBot, err := s.db.CountMessagesChat(chatID, lastBot+1)
+	weekCount, err := s.db.CountMessagesPeople(chatID, s.botID, now.Add(-s.cfg.WeekWindow).Unix())
 	if err != nil {
 		return false, err
 	}
 
 	send := probability.ShouldSend(
+		localCount,
 		weekCount,
-		silence,
-		msgsSinceBot,
+		localWindow,
 		s.cfg.SendCheckInterval,
 		s.cfg.ProbabilityParams,
 	)
-	log.Printf("shouldSend, чат %d: %t", chatID, send)
+	log.Printf("shouldSend, чат %d: localCount=%d weekCount=%d localWindow=%d → %t",
+		chatID, localCount, weekCount, localWindow, send)
 
 	return send, nil
 }
@@ -228,9 +196,6 @@ func (s *Sender) pickUser(chatID int64, now time.Time) (int64, error) {
 	var total float64
 
 	for _, userID := range users {
-		if userID == s.botID {
-			continue
-		}
 		count, err := s.db.CountMessagesUser(chatID, userID, windowStart)
 		if err != nil {
 			return 0, err
@@ -252,6 +217,13 @@ func (s *Sender) pickUser(chatID int64, now time.Time) (int64, error) {
 	return ids[idx], nil
 }
 
+func (s *Sender) LocalWindow(checkInterval time.Duration) time.Duration {
+	if checkInterval > s.cfg.MinumumlocalWindow {
+		return checkInterval
+	}
+	return s.cfg.MinumumlocalWindow
+}
+
 // weightedIndex возвращает индекс по взвешенному распределению [0, total).
 func weightedIndex(weights []float64, total float64) int {
 	r := rand.Float64() * total
@@ -262,28 +234,4 @@ func weightedIndex(weights []float64, total float64) int {
 		r -= w
 	}
 	return len(weights) - 1
-}
-
-func applyDefaults(cfg *Config) {
-	if cfg.SendCheckInterval <= 0 {
-		cfg.SendCheckInterval = defaultCheckInterval
-	}
-	if cfg.ProbabilityParams.Lambda0 <= 0 {
-		cfg.ProbabilityParams.Lambda0 = defaultProbabilityParams.Lambda0
-	}
-	if cfg.ProbabilityParams.KMessages <= 0 {
-		cfg.ProbabilityParams.KMessages = defaultProbabilityParams.KMessages
-	}
-	if cfg.ProbabilityParams.TauSilence <= 0 {
-		cfg.ProbabilityParams.TauSilence = defaultProbabilityParams.TauSilence
-	}
-	if cfg.ProbabilityParams.KUserMessages <= 0 {
-		cfg.ProbabilityParams.KUserMessages = defaultProbabilityParams.KUserMessages
-	}
-	if cfg.MinUserWeight <= 0 {
-		cfg.MinUserWeight = defaultMinUserWeight
-	}
-	if cfg.WeekWindow <= 0 {
-		cfg.WeekWindow = defaultWeekWindow
-	}
 }

@@ -14,25 +14,24 @@ import (
 
 func main() {
 	var probabilityParams = probability.Params{
-		Lambda0:       1.0 / (3 * time.Minute).Seconds(),
-		KMessages:     300,
-		TauSilence:    (6 * time.Hour).Seconds(),
-		KUserMessages: 60,
+		BotMessageRatio: 0.05,
+		InitiativeRate:  1.5 / (8 * time.Hour).Seconds(),
+		TargetWeekRate:  0.05 / 60,
 	}
 	config := bot.Config{
-		DatabasePath:      "data/carrotbot.db",
-		LogPath:           "data/carrotbot.log",
-		QueueReadInterval: time.Second * 60,
-		SendCheckInterval: time.Second * 30,
-		ProbabilityParams: probabilityParams,
-		MinUserWeight:     10,
-		WeekWindow:        time.Hour * 24 * 7,
+		DatabasePath:       "data/carrotbot.db",
+		LogPath:            "data/carrotbot.log",
+		QueueReadInterval:  time.Second * 60,
+		SendCheckInterval:  time.Second * 30,
+		MinumumlocalWindow: time.Minute * 2,
+		ProbabilityParams:  probabilityParams,
+		MinUserWeight:      10,
+		WeekWindow:         time.Hour * 24 * 7,
 	}
 	var testingProbabilityParams = probability.Params{
-		Lambda0:       100 / (3 * time.Second).Seconds(),
-		KMessages:     300,
-		TauSilence:    (6 * time.Second).Seconds(),
-		KUserMessages: 60,
+		BotMessageRatio: 0.5,
+		InitiativeRate:  1.0 / (30 * time.Second).Seconds(),
+		TargetWeekRate:  0.05 / 60,
 	}
 	testingConfig := bot.Config{
 		DatabasePath:      "data/carrotbot.db",
