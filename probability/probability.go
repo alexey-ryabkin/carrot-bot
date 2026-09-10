@@ -124,7 +124,8 @@ func ShouldSend(
 	roll := rand.Float64()
 	decision := roll < pSend
 
-	log.Printf("ShouldSend: messagesLocal=%d messagesLast7Days=%d messagesSinceBot=%d checkInterval=%v p=%e roll=%.6f decision=%t",
+	log.Printf("ShouldSend: messagesLocal=%d messagesLast7Days=%d messagesSinceBot=%d " +
+		"checkInterval=%v p=%e roll=%e decision=%t",
 		messagesLocal, messagesLast7Days, messagesSinceBot, checkInterval, pSend, roll, decision)
 
 	return decision

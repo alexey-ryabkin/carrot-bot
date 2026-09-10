@@ -3,7 +3,7 @@ module github.com/alexey-ryabkin/carrot-bot
 go 1.25.0
 
 require (
-	github.com/alexey-ryabkin/markov-module v0.0.0-00010101000000-000000000000
+	github.com/alexey-ryabkin/markov-module v0.0.0-20260910191726-c467f30459b6
 	gopkg.in/telebot.v4 v4.0.0-beta.10
 	modernc.org/sqlite v1.54.0
 )
@@ -19,5 +19,3 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 )
-
-replace github.com/alexey-ryabkin/markov-module => ../markov-module
