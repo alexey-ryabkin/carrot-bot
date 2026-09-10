@@ -22,7 +22,7 @@ func main() {
 	config := bot.Config{
 		DatabasePath:       "data/carrotbot.db",
 		LogPath:            "data/carrotbot.log",
-		QueueReadInterval:  time.Second * 60,
+		QueueReadInterval:  time.Second * 30,
 		SendCheckInterval:  time.Second * 30,
 		MinumumlocalWindow: time.Minute * 2,
 		ProbabilityParams:  probabilityParams,
