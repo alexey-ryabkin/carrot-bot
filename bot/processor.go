@@ -95,24 +95,30 @@ func (p *Processor) learn(messages []*tele.Message) {
 	carrotMessages := make([]model.Message, 0, len(messages))
 
 	for _, message := range messages {
-		if message.Sender == nil {
+		if message.Sender == nil || message.Chat == nil {
+			continue
+		}
+
+		carrotMessages = append(carrotMessages, model.Message{
+			ChatId:   message.Chat.ID,
+			UserId:   message.Sender.ID,
+			UnixTime: message.Unixtime,
+		})
+
+		text := messageText(message)
+		if text == "" {
 			continue
 		}
 		markovMessages = append(markovMessages, markovModel.Message{
 			ChatId:   message.Chat.ID,
 			UserId:   message.Sender.ID,
 			UnixTime: message.Unixtime,
-			Text:     message.Text,
-		})
-		carrotMessages = append(carrotMessages, model.Message{
-			ChatId:   message.Chat.ID,
-			UserId:   message.Sender.ID,
-			UnixTime: message.Unixtime,
+			Text:     text,
 		})
 	}
 
-	log.Printf("обучение: batch=%d usable=%d пропущено=%d (нет отправителя)",
-		len(messages), len(carrotMessages), len(messages)-len(carrotMessages))
+	log.Printf("обучение: batch=%d activity=%d markov=%d пропущено=%d (нет отправителя/чата)",
+		len(messages), len(carrotMessages), len(markovMessages), len(messages)-len(carrotMessages))
 
 	err := p.markov.LearnMany(markovMessages)
 	if err != nil {

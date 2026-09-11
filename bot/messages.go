@@ -13,6 +13,16 @@ type MessageGroup struct {
 	Messages []*tele.Message
 }
 
+func messageText(m *tele.Message) string {
+	if m == nil {
+		return ""
+	}
+	if m.Text != "" {
+		return m.Text
+	}
+	return m.Caption
+}
+
 // logText подготавливает текст для записи в лог: схлопывает переводы строк
 // и усекает слишком длинные сообщения.
 func logText(text string) string {

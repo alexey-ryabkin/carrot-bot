@@ -51,7 +51,14 @@ func New(cfg Config, engine *markov.Engine) (*Bot, error) {
 	}
 
 	b.Handle("/start", start)
-	b.Handle(tele.OnText, bot.text)
+
+	b.Handle(tele.OnText, bot.handleMessage)
+	b.Handle(tele.OnPhoto, bot.handleMessage)
+	b.Handle(tele.OnVideo, bot.handleMessage)
+	b.Handle(tele.OnDocument, bot.handleMessage)
+	b.Handle(tele.OnAudio, bot.handleMessage)
+	b.Handle(tele.OnAnimation, bot.handleMessage)
+	b.Handle(tele.OnVoice, bot.handleMessage)
 
 	log.Printf("бот инициализирован")
 
@@ -77,11 +84,16 @@ func start(c tele.Context) error {
 	return c.Send("Бот работает")
 }
 
-func (b *Bot) text(c tele.Context) error {
+func (b *Bot) handleMessage(c tele.Context) error {
 	message := c.Message()
 	if message == nil {
-		log.Printf("OnText вызван без сообщения")
-		return errors.New("No message in OnText")
+		log.Printf("handleMessage вызван без сообщения")
+		return errors.New("no message in handleMessage")
+	}
+
+	text := messageText(message)
+	if text == "" {
+		return nil
 	}
 
 	if message.Sender != nil {
@@ -107,10 +119,10 @@ func (b *Bot) text(c tele.Context) error {
 
 		log.Printf("получено сообщение: %s msgid=%d from=%s text=%q",
 			labelChat(message.Chat), message.ID,
-			labelUser(message.Sender), logText(message.Text))
+			labelUser(message.Sender), logText(text))
 	} else {
 		log.Printf("получено сообщение без чата: msgid=%d from=%s text=%q",
-			message.ID, labelUser(message.Sender), logText(message.Text))
+			message.ID, labelUser(message.Sender), logText(text))
 	}
 
 	b.MyProcessor.Add(message)
