@@ -49,8 +49,8 @@ func (s *SQLite) GetUsers(chatId int64) ([]int64, error) {
 	var users []int64
 
 	rows, err := s.db.Query(`
-		SELECT DISTINCT userId
-		FROM messages
+		SELECT DISTINCT id
+		FROM users
 		WHERE chatId = ?
 	`, chatId)
 	if err != nil {
@@ -269,10 +269,12 @@ func (s *SQLite) initialize() error {
 
 		`
 		CREATE TABLE IF NOT EXISTS users (
-			id INTEGER PRIMARY KEY,
+			id INTEGER,
+			chatId INTEGER,
 			firstName TEXT NOT NULL DEFAULT '',
 			lastName TEXT NOT NULL DEFAULT '',
-			username TEXT NOT NULL DEFAULT ''
+			username TEXT NOT NULL DEFAULT '',
+			PRIMARY KEY (id, chatId)
 		)
 		`,
 

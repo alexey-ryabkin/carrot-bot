@@ -96,6 +96,7 @@ func (b *Bot) handleMessage(c tele.Context) error {
 		return nil
 	}
 
+	// Лог полученного сообщения
 	if message.Sender != nil {
 		if err := b.db.UpsertUser(model.User{
 			ID:        message.Sender.ID,
