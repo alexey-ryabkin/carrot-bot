@@ -158,8 +158,8 @@ func TestProbabilityCooldown(t *testing.T) {
 	threshold := int(p.CooldownMessages)
 
 	immediate := Probability(0, weekMessages, 0, 120, weekSeconds, 30, p)
-	if immediate != 0 {
-		t.Fatalf("сразу после сообщения бота вероятность должна быть 0, получили %v", immediate)
+	if math.Abs(immediate-0.1) > 1e-9 {
+		t.Fatalf("сразу после сообщения бота вероятность должна быть 0.1, получили %v", immediate)
 	}
 
 	full := Probability(0, weekMessages, threshold, 120, weekSeconds, 30, p)

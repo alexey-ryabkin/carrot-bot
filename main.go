@@ -25,9 +25,21 @@ func main() {
 		QueueReadInterval:  time.Second * 30,
 		SendCheckInterval:  time.Second * 30,
 		MinumumlocalWindow: time.Minute * 2,
-		ProbabilityParams:  probabilityParams,
-		MinUserWeight:      10,
 		GlobalWindow:       time.Hour * 24 * 7,
+
+		// Персональные настройки чатов. Значения -1 и -2 — заглушки
+		// для первых чатов; остальные чаты используют настройки
+		// по умолчанию.
+		ChatSettings: map[int64]bot.ChatSettings{
+			// Имя чата 1
+			-1: {ProbabilityParams: probabilityParams, MinUserWeight: 10},
+			// Имя чата 2
+			-2: {ProbabilityParams: probabilityParams, MinUserWeight: 10},
+		},
+		DefaultChatSettings: bot.ChatSettings{
+			ProbabilityParams: probabilityParams,
+			MinUserWeight:     10,
+		},
 	}
 
 	configMarkov := markov.Config{

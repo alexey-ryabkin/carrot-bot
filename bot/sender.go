@@ -35,8 +35,9 @@ func NewSender(tele *tele.Bot, engine *markov.Engine, db *storage.SQLite, cfg Co
 		botID = tele.Me.ID
 	}
 
-	log.Printf("отправитель создан: checkInterval=%v minUserWeight=%v globalWindow=%v botID=%d params=%+v",
-		cfg.SendCheckInterval, cfg.MinUserWeight, cfg.GlobalWindow, botID, cfg.ProbabilityParams)
+	defaults := cfg.DefaultChatSettings
+	log.Printf("отправитель создан: checkInterval=%v defaultMinUserWeight=%v globalWindow=%v botID=%d defaultParams=%+v chatSettings=%d",
+		cfg.SendCheckInterval, defaults.MinUserWeight, cfg.GlobalWindow, botID, defaults.ProbabilityParams, len(cfg.ChatSettings))
 
 	return &Sender{
 		tele:   tele,
@@ -167,6 +168,8 @@ func (s *Sender) send(chatID int64, text string) error {
 
 // shouldSend решает, пора ли отправить сообщение в чат.
 func (s *Sender) shouldSend(chatID int64, now time.Time) (bool, error) {
+	settings := s.cfg.SettingsFor(chatID)
+
 	localWindow := s.LocalWindow(s.cfg.SendCheckInterval)
 	localCount, err := s.db.CountMessagesPeople(chatID, s.botID, now.Add(-localWindow).Unix())
 	if err != nil {
@@ -194,7 +197,7 @@ func (s *Sender) shouldSend(chatID int64, now time.Time) (bool, error) {
 		localWindow,
 		s.cfg.GlobalWindow,
 		s.cfg.SendCheckInterval,
-		s.cfg.ProbabilityParams,
+		settings.ProbabilityParams,
 	)
 	log.Printf("shouldSend, чат %s: localCount=%d weekCount=%d sinceBotCount=%d localWindow=%v → %t",
 		s.chatLabel(chatID), localCount, weekCount, sinceBotCount, localWindow, send)
@@ -203,6 +206,8 @@ func (s *Sender) shouldSend(chatID int64, now time.Time) (bool, error) {
 }
 
 func (s *Sender) pickUser(chatID int64, now time.Time) (int64, error) {
+	settings := s.cfg.SettingsFor(chatID)
+
 	users, err := s.db.GetUsers(chatID)
 	if err != nil {
 		return 0, err
@@ -218,7 +223,7 @@ func (s *Sender) pickUser(chatID int64, now time.Time) (int64, error) {
 		if err != nil {
 			return 0, err
 		}
-		w := float64(count) + s.cfg.MinUserWeight
+		w := float64(count) + settings.MinUserWeight
 		ids = append(ids, userID)
 		weights = append(weights, w)
 		total += w
