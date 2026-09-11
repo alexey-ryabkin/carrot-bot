@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/alexey-ryabkin/carrot-bot/config"
 	"github.com/alexey-ryabkin/carrot-bot/model"
 	"github.com/alexey-ryabkin/carrot-bot/storage"
 	"github.com/alexey-ryabkin/markov-module"
@@ -18,10 +19,10 @@ type Bot struct {
 	Sender       *Sender
 	MarkovEngine *markov.Engine
 	db           *storage.SQLite
-	cfg          Config
+	cfg          *config.Service
 }
 
-func New(cfg Config, engine *markov.Engine) (*Bot, error) {
+func New(cfg *config.Service, engine *markov.Engine) (*Bot, error) {
 	log.Printf("создание Telegram-клиента, TELEGRAM_TOKEN задан: %t", os.Getenv("TELEGRAM_TOKEN") != "")
 
 	b, err := tele.NewBot(tele.Settings{
@@ -35,11 +36,11 @@ func New(cfg Config, engine *markov.Engine) (*Bot, error) {
 	}
 	log.Printf("Telegram-клиент создан, id=%d username=%s", b.Me.ID, b.Me.Username)
 
-	db, err := storage.GetDB(cfg.DatabasePath)
+	db, err := storage.GetDB(cfg.DatabasePath())
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("база активности готова: %s", cfg.DatabasePath)
+	log.Printf("база активности готова: %s", cfg.DatabasePath())
 
 	bot := &Bot{
 		TeleBot:      b,

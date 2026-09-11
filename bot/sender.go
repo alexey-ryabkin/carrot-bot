@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/alexey-ryabkin/carrot-bot/config"
 	"github.com/alexey-ryabkin/carrot-bot/model"
 	"github.com/alexey-ryabkin/carrot-bot/probability"
 	"github.com/alexey-ryabkin/carrot-bot/storage"
@@ -20,7 +21,7 @@ type Sender struct {
 	tele   *tele.Bot
 	markov *markov.Engine
 	db     *storage.SQLite
-	cfg    Config
+	cfg    *config.Service
 
 	// ID бота, которым записываются собственные сообщения в кэш активности.
 	botID int64
@@ -29,15 +30,15 @@ type Sender struct {
 	done chan struct{}
 }
 
-func NewSender(tele *tele.Bot, engine *markov.Engine, db *storage.SQLite, cfg Config) *Sender {
+func NewSender(tele *tele.Bot, engine *markov.Engine, db *storage.SQLite, cfg *config.Service) *Sender {
 	var botID int64
 	if tele.Me != nil {
 		botID = tele.Me.ID
 	}
 
-	defaults := cfg.DefaultChatSettings
-	log.Printf("отправитель создан: checkInterval=%v defaultMinUserWeight=%v globalWindow=%v botID=%d defaultParams=%+v chatSettings=%d",
-		cfg.SendCheckInterval, defaults.MinUserWeight, cfg.GlobalWindow, botID, defaults.ProbabilityParams, len(cfg.ChatSettings))
+	defaults := cfg.DefaultChatSettings()
+	log.Printf("отправитель создан: checkInterval=%v defaultMinUserWeight=%v globalWindow=%v botID=%d defaultParams=%+v",
+		cfg.SendCheckInterval(), defaults.MinUserWeight, cfg.GlobalWindow(), botID, defaults.ProbabilityParams)
 
 	return &Sender{
 		tele:   tele,
@@ -55,9 +56,9 @@ func (s *Sender) Start() {
 	go func() {
 		defer close(s.done)
 
-		log.Printf("отправитель запущен, проверка каждые %v", s.cfg.SendCheckInterval)
+		log.Printf("отправитель запущен, проверка каждые %v", s.cfg.SendCheckInterval())
 
-		ticker := time.NewTicker(s.cfg.SendCheckInterval)
+		ticker := time.NewTicker(s.cfg.SendCheckInterval())
 		defer ticker.Stop()
 
 		for {
@@ -170,13 +171,13 @@ func (s *Sender) send(chatID int64, text string) error {
 func (s *Sender) shouldSend(chatID int64, now time.Time) (bool, error) {
 	settings := s.cfg.SettingsFor(chatID)
 
-	localWindow := s.LocalWindow(s.cfg.SendCheckInterval)
+	localWindow := s.LocalWindow(s.cfg.SendCheckInterval())
 	localCount, err := s.db.CountMessagesPeople(chatID, s.botID, now.Add(-localWindow).Unix())
 	if err != nil {
 		return false, err
 	}
 
-	weekCount, err := s.db.CountMessagesPeople(chatID, s.botID, now.Add(-s.cfg.GlobalWindow).Unix())
+	weekCount, err := s.db.CountMessagesPeople(chatID, s.botID, now.Add(-s.cfg.GlobalWindow()).Unix())
 	if err != nil {
 		return false, err
 	}
@@ -195,8 +196,8 @@ func (s *Sender) shouldSend(chatID int64, now time.Time) (bool, error) {
 		weekCount,
 		sinceBotCount,
 		localWindow,
-		s.cfg.GlobalWindow,
-		s.cfg.SendCheckInterval,
+		s.cfg.GlobalWindow(),
+		s.cfg.SendCheckInterval(),
 		settings.ProbabilityParams,
 	)
 	log.Printf("shouldSend, чат %s: localCount=%d weekCount=%d sinceBotCount=%d localWindow=%v → %t",
@@ -213,7 +214,7 @@ func (s *Sender) pickUser(chatID int64, now time.Time) (int64, error) {
 		return 0, err
 	}
 
-	windowStart := now.Add(-s.cfg.GlobalWindow).Unix()
+	windowStart := now.Add(-s.cfg.GlobalWindow()).Unix()
 	ids := make([]int64, 0, len(users))
 	weights := make([]float64, 0, len(users))
 	var total float64
@@ -249,10 +250,10 @@ func (s *Sender) pickUser(chatID int64, now time.Time) (int64, error) {
 }
 
 func (s *Sender) LocalWindow(checkInterval time.Duration) time.Duration {
-	if checkInterval > s.cfg.MinumumlocalWindow {
+	if checkInterval > s.cfg.MinimumLocalWindow() {
 		return checkInterval
 	}
-	return s.cfg.MinumumlocalWindow
+	return s.cfg.MinimumLocalWindow()
 }
 
 // weightedIndex возвращает индекс по взвешенному распределению [0, total).

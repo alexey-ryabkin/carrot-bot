@@ -5,62 +5,39 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/alexey-ryabkin/carrot-bot/bot"
-	"github.com/alexey-ryabkin/carrot-bot/probability"
+	"github.com/alexey-ryabkin/carrot-bot/config"
 	"github.com/alexey-ryabkin/markov-module"
 )
 
-func main() {
-	var probabilityParams = probability.Params{
-		BotMessageRatio:  0.05,
-		InitiativeRate:   1.5 / (8 * time.Hour).Seconds(),
-		TargetWeekRate:   0.05 / 60,
-		CooldownMessages: 5,
-	}
-	config := bot.Config{
-		DatabasePath:       "data/carrotbot.db",
-		LogPath:            "data/carrotbot.log",
-		QueueReadInterval:  time.Second * 30,
-		SendCheckInterval:  time.Second * 30,
-		MinumumlocalWindow: time.Minute * 2,
-		GlobalWindow:       time.Hour * 24 * 7,
+const configPath = "config.json"
 
-		// Персональные настройки чатов. Значения -1 и -2 — заглушки
-		// для первых чатов; остальные чаты используют настройки
-		// по умолчанию.
-		ChatSettings: map[int64]bot.ChatSettings{
-			// Имя чата 1
-			-1: {ProbabilityParams: probabilityParams, MinUserWeight: 10},
-			// Имя чата 2
-			-2: {ProbabilityParams: probabilityParams, MinUserWeight: 10},
-		},
-		DefaultChatSettings: bot.ChatSettings{
-			ProbabilityParams: probabilityParams,
-			MinUserWeight:     10,
-		},
+func main() {
+	cfg, err := config.New(configPath)
+	if err != nil {
+		log.Fatalf("чтение настроек %s: %v", configPath, err)
 	}
 
 	configMarkov := markov.Config{
-		DatabasePath: "data/markov.db",
-		Order:        3,
+		DatabasePath: cfg.MarkovDatabasePath(),
+		Order:        cfg.MarkovOrder(),
 	}
 
 	if len(os.Args) > 1 {
-		importHistory(os.Args[1], config, configMarkov)
+		importHistory(os.Args[1], cfg, configMarkov)
 		return
 	}
 
-	closeLogger, err := InitLogger(config.LogPath)
+	closeLogger, err := InitLogger(cfg.LogPath())
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer closeLogger()
-	log.Printf("журнал инициализирован, путь к журналу: %s", config.LogPath)
+	log.Printf("журнал инициализирован, путь к журналу: %s", cfg.LogPath())
 
 	log.Printf("запуск carrot-bot: database=%s markovDB=%s markovOrder=%d",
-		config.DatabasePath, configMarkov.DatabasePath, configMarkov.Order)
+		cfg.DatabasePath(), configMarkov.DatabasePath, configMarkov.Order)
 
 	engine, err := markov.New(&configMarkov)
 	if err != nil {
@@ -68,7 +45,7 @@ func main() {
 	}
 	log.Printf("движок Маркова готов: markovOrder=%d", configMarkov.Order)
 
-	b, err := bot.New(config, engine)
+	b, err := bot.New(cfg, engine)
 	if err != nil {
 		log.Fatal(err)
 	}

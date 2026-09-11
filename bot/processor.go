@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/alexey-ryabkin/carrot-bot/config"
 	"github.com/alexey-ryabkin/carrot-bot/model"
 	"github.com/alexey-ryabkin/carrot-bot/storage"
 	"github.com/alexey-ryabkin/markov-module"
@@ -17,13 +18,13 @@ type Processor struct {
 	messages []*tele.Message
 	markov   *markov.Engine
 	db       *storage.SQLite
-	cfg      Config
+	cfg      *config.Service
 
 	stop chan struct{}
 	done chan struct{}
 }
 
-func NewProcessor(engine *markov.Engine, db *storage.SQLite, cfg Config) *Processor {
+func NewProcessor(engine *markov.Engine, db *storage.SQLite, cfg *config.Service) *Processor {
 	return &Processor{
 		messages: make([]*tele.Message, 0),
 		stop:     make(chan struct{}),
@@ -56,9 +57,9 @@ func (p *Processor) Start() {
 	go func() {
 		defer close(p.done)
 
-		log.Printf("процессор запущен, сброс каждые %v", p.cfg.QueueReadInterval)
+		log.Printf("процессор запущен, сброс каждые %v", p.cfg.QueueReadInterval())
 
-		ticker := time.NewTicker(p.cfg.QueueReadInterval)
+		ticker := time.NewTicker(p.cfg.QueueReadInterval())
 		defer ticker.Stop()
 
 		for {
@@ -132,7 +133,7 @@ func (p *Processor) learn(messages []*tele.Message) {
 	}
 	log.Printf("в кэш активности сохранено %d сообщений", len(carrotMessages))
 
-	err = p.db.CleanOldMessages(p.cfg.GlobalWindow)
+	err = p.db.CleanOldMessages(p.cfg.GlobalWindow())
 	if err != nil {
 		log.Fatalf("ошибка очистки старых сообщений (CleanOldMessages): %v", err)
 	}

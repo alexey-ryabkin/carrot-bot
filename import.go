@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/alexey-ryabkin/carrot-bot/bot"
+	"github.com/alexey-ryabkin/carrot-bot/config"
 	"github.com/alexey-ryabkin/carrot-bot/model"
 	"github.com/alexey-ryabkin/carrot-bot/storage"
 	"github.com/alexey-ryabkin/markov-module"
@@ -80,7 +80,7 @@ func parseUserID(fromID string) int64 {
 	return id
 }
 
-func importHistory(path string, cfg bot.Config, markovCfg markov.Config) {
+func importHistory(path string, cfg *config.Service, markovCfg markov.Config) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		log.Fatal(err)
@@ -103,7 +103,7 @@ func importHistory(path string, cfg bot.Config, markovCfg markov.Config) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	db, err := storage.GetDB(cfg.DatabasePath)
+	db, err := storage.GetDB(cfg.DatabasePath())
 	if err != nil {
 		log.Fatal(err)
 	}

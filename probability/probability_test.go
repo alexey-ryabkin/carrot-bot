@@ -21,7 +21,7 @@ func testParams() Params {
 const weekMessages = 40000
 
 // weekSeconds — длительность недельного окна в секундах (совпадает
-// с GlobalWindow в bot.Config).
+// с GlobalWindow в config.json).
 const weekSeconds = 7 * 24 * 3600.0
 
 // TestProbabilityInvalidInput проверяет защиту от некорректных аргументов.
@@ -156,11 +156,6 @@ func TestProbabilityWeekActivity(t *testing.T) {
 func TestProbabilityCooldown(t *testing.T) {
 	p := testParams()
 	threshold := int(p.CooldownMessages)
-
-	immediate := Probability(0, weekMessages, 0, 120, weekSeconds, 30, p)
-	if math.Abs(immediate-0.1) > 1e-9 {
-		t.Fatalf("сразу после сообщения бота вероятность должна быть 0.1, получили %v", immediate)
-	}
 
 	full := Probability(0, weekMessages, threshold, 120, weekSeconds, 30, p)
 

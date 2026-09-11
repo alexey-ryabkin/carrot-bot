@@ -1,0 +1,121 @@
+{
+  "database_path": {
+    "value": "data/carrotbot.db",
+    "description": "Путь к базе данных активности"
+  },
+  "log_path": {
+    "value": "data/carrotbot.log",
+    "description": "Путь к файлу журнала"
+  },
+  "queue_read_interval_seconds": {
+    "value": 30,
+    "description": "Как часто процессор забирает сообщения из очереди"
+  },
+  "send_check_interval_seconds": {
+    "value": 30,
+    "description": "Как часто отправитель проверяет, не пора ли написать в чат"
+  },
+  "minimum_local_window_seconds": {
+    "value": 120,
+    "description": "Минимальное окно локальной активности"
+  },
+  "global_window_seconds": {
+    "value": 604800,
+    "description": "Окно недельной активности (7 дней)"
+  },
+  "markov": {
+    "database_path": {
+      "value": "data/markov.db",
+      "description": "Путь к базе марковской цепи"
+    },
+    "order": {
+      "value": 3,
+      "description": "Порядок марковской цепи"
+    }
+  },
+  "default_chat": {
+    "name": "Настройки по умолчанию",
+    "min_user_weight": {
+      "value": 10,
+      "description": "Добавка к весу пользователя при выборе, чтобы писали и молчуны"
+    },
+    "probability": {
+      "bot_message_ratio": {
+        "value": 0.05,
+        "description": "Доля сообщений бота от активности людей: 0.05 — примерно 1 на 20"
+      },
+      "initiative_rate": {
+        "value": 0.00005208333333333333,
+        "description": "Интенсивность инициативы бота в тишине, событий в секунду (~1.5 за 8 часов)"
+      },
+      "target_week_rate": {
+        "value": 0.0008333333333333334,
+        "description": "Сообщений в секунду, дающих 100% живости чата за неделю"
+      },
+      "cooldown_messages": {
+        "value": 5,
+        "description": "Сколько сообщений людей после бота дают полную интенсивность"
+      }
+    }
+  },
+  "chats": [
+    {
+      "name": "Имя чата 1",
+      "id": {
+        "value": -1,
+        "description": "ID чата в Telegram"
+      },
+      "min_user_weight": {
+        "value": 10,
+        "description": "Добавка к весу пользователя при выборе"
+      },
+      "probability": {
+        "bot_message_ratio": {
+          "value": 0.05,
+          "description": "Доля сообщений бота от активности людей"
+        },
+        "initiative_rate": {
+          "value": 0.00005208333333333333,
+          "description": "Интенсивность инициативы бота в тишине"
+        },
+        "target_week_rate": {
+          "value": 0.0008333333333333334,
+          "description": "Скорость сообщений для 100% живости"
+        },
+        "cooldown_messages": {
+          "value": 5,
+          "description": "Сообщений людей после бота до полной интенсивности"
+        }
+      }
+    },
+    {
+      "name": "Имя чата 2",
+      "id": {
+        "value": -2,
+        "description": "ID чата в Telegram"
+      },
+      "min_user_weight": {
+        "value": 10,
+        "description": "Добавка к весу пользователя при выборе"
+      },
+      "probability": {
+        "bot_message_ratio": {
+          "value": 0.05,
+          "description": "Доля сообщений бота от активности людей"
+        },
+        "initiative_rate": {
+          "value": 0.00005208333333333333,
+          "description": "Интенсивность инициативы бота в тишине"
+        },
+        "target_week_rate": {
+          "value": 0.0008333333333333334,
+          "description": "Скорость сообщений для 100% живости"
+        },
+        "cooldown_messages": {
+          "value": 5,
+          "description": "Сообщений людей после бота до полной интенсивности"
+        }
+      }
+    }
+  ]
+}
