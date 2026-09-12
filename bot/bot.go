@@ -75,6 +75,12 @@ func (b *Bot) Start() {
 	log.Printf("поллер Telegram остановлен")
 }
 
+func (b *Bot) Trigger() {
+	log.Printf("ручной запуск тиков")
+	b.MyProcessor.Trigger()
+	b.Sender.Trigger()
+}
+
 func start(c tele.Context) error {
 	if u := c.Sender(); u != nil {
 		log.Printf("команда /start от пользователя %s", labelUser(u))

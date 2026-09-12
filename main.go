@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"log"
 	"os"
 	"os/signal"
@@ -53,13 +54,15 @@ func main() {
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
-	log.Printf("бот запущен, ожидание SIGINT/SIGTERM")
+	log.Printf("бот запущен, ожидание SIGINT/SIGTERM; Enter — немедленный тик")
 
 	stopped := make(chan struct{})
 	go func() {
 		b.Start()
 		close(stopped)
 	}()
+
+	go watchEnter(b)
 
 	received := <-sig
 	log.Printf("получен сигнал: %v", received)
@@ -70,4 +73,15 @@ func main() {
 
 	<-stopped
 	log.Printf("работа завершена")
+}
+
+func watchEnter(b *bot.Bot) {
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		log.Printf("получен Enter: немедленный тик")
+		b.Trigger()
+	}
+	if err := scanner.Err(); err != nil {
+		log.Printf("чтение стандартного ввода остановлено: %v", err)
+	}
 }

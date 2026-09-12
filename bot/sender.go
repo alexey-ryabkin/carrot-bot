@@ -26,8 +26,9 @@ type Sender struct {
 	// ID бота, которым записываются собственные сообщения в кэш активности.
 	botID int64
 
-	stop chan struct{}
-	done chan struct{}
+	stop    chan struct{}
+	done    chan struct{}
+	trigger chan struct{}
 }
 
 func NewSender(tele *tele.Bot, engine *markov.Engine, db *storage.SQLite, cfg *config.Service) *Sender {
@@ -41,13 +42,23 @@ func NewSender(tele *tele.Bot, engine *markov.Engine, db *storage.SQLite, cfg *c
 		cfg.SendCheckInterval(), defaults.MinUserWeight, cfg.GlobalWindow(), botID, defaults.ProbabilityParams)
 
 	return &Sender{
-		tele:   tele,
-		markov: engine,
-		db:     db,
-		cfg:    cfg,
-		botID:  botID,
-		stop:   make(chan struct{}),
-		done:   make(chan struct{}),
+		tele:    tele,
+		markov:  engine,
+		db:      db,
+		cfg:     cfg,
+		botID:   botID,
+		stop:    make(chan struct{}),
+		done:    make(chan struct{}),
+		trigger: make(chan struct{}, 1),
+	}
+}
+
+func (s *Sender) Trigger() {
+	select {
+	case s.trigger <- struct{}{}:
+		log.Printf("отправитель: запрошен ручной запуск")
+	default:
+		log.Printf("отправитель: ручной запуск уже запланирован")
 	}
 }
 
@@ -64,6 +75,9 @@ func (s *Sender) Start() {
 		for {
 			select {
 			case <-ticker.C:
+				s.check()
+			case <-s.trigger:
+				log.Printf("отправитель: ручной запуск")
 				s.check()
 			case <-s.stop:
 				log.Printf("отправитель остановлен")

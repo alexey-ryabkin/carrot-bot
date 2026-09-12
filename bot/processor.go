@@ -20,8 +20,9 @@ type Processor struct {
 	db       *storage.SQLite
 	cfg      *config.Service
 
-	stop chan struct{}
-	done chan struct{}
+	stop    chan struct{}
+	done    chan struct{}
+	trigger chan struct{}
 }
 
 func NewProcessor(engine *markov.Engine, db *storage.SQLite, cfg *config.Service) *Processor {
@@ -29,9 +30,19 @@ func NewProcessor(engine *markov.Engine, db *storage.SQLite, cfg *config.Service
 		messages: make([]*tele.Message, 0),
 		stop:     make(chan struct{}),
 		done:     make(chan struct{}),
+		trigger:  make(chan struct{}, 1),
 		markov:   engine,
 		db:       db,
 		cfg:      cfg,
+	}
+}
+
+func (p *Processor) Trigger() {
+	select {
+	case p.trigger <- struct{}{}:
+		log.Printf("процессор: запрошен ручной запуск")
+	default:
+		log.Printf("процессор: ручной запуск уже запланирован")
 	}
 }
 
@@ -63,6 +74,10 @@ func (p *Processor) Start() {
 		for {
 			select {
 			case <-ticker.C:
+				p.process()
+
+			case <-p.trigger:
+				log.Printf("процессор: ручной запуск")
 				p.process()
 
 			case <-p.stop:
