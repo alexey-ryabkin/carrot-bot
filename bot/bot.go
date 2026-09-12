@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/alexey-ryabkin/carrot-bot/config"
-	"github.com/alexey-ryabkin/carrot-bot/model"
 	"github.com/alexey-ryabkin/carrot-bot/storage"
 	"github.com/alexey-ryabkin/markov-module"
 	tele "gopkg.in/telebot.v4"
@@ -95,36 +94,6 @@ func (b *Bot) handleMessage(c tele.Context) error {
 	text := messageText(message)
 	if text == "" {
 		return nil
-	}
-
-	// Лог полученного сообщения
-	if message.Sender != nil {
-		if err := b.db.UpsertUser(model.User{
-			ID:        message.Sender.ID,
-			FirstName: message.Sender.FirstName,
-			LastName:  message.Sender.LastName,
-			Username:  message.Sender.Username,
-		}); err != nil {
-			log.Printf("сохранение пользователя в базу: %v", err)
-		}
-	}
-
-	if message.Chat != nil {
-		if err := b.db.UpsertChat(model.Chat{
-			ID:       message.Chat.ID,
-			Type:     string(message.Chat.Type),
-			Title:    message.Chat.Title,
-			Username: message.Chat.Username,
-		}); err != nil {
-			log.Printf("сохранение чата в базу: %v", err)
-		}
-
-		log.Printf("получено сообщение: %s msgid=%d from=%s text=%q",
-			labelChat(message.Chat), message.ID,
-			labelUser(message.Sender), logText(text))
-	} else {
-		log.Printf("получено сообщение без чата: msgid=%d from=%s text=%q",
-			message.ID, labelUser(message.Sender), logText(text))
 	}
 
 	b.MyProcessor.Add(message)

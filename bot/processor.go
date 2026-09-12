@@ -46,11 +46,9 @@ func (p *Processor) Add(message *tele.Message) {
 	queued := len(p.messages)
 	p.mu.Unlock()
 
-	if message.Chat != nil {
-		log.Printf("сообщение поставлено в очередь: %s msgid=%d queue=%d", labelChat(message.Chat), message.ID, queued)
-	} else {
-		log.Printf("сообщение поставлено в очередь без чата: msgid=%d queue=%d", message.ID, queued)
-	}
+	text := messageText(message)
+	log.Printf("сообщение поставлено в очередь: %s msgid=%d queue=%d from=%s text=%q",
+		labelChat(message.Chat), message.ID, queued, labelUser(message.Sender), logText(text))
 }
 
 func (p *Processor) Start() {
@@ -96,8 +94,31 @@ func (p *Processor) learn(messages []*tele.Message) {
 	carrotMessages := make([]model.Message, 0, len(messages))
 
 	for _, message := range messages {
+		text := messageText(message)
+
 		if message.Sender == nil || message.Chat == nil {
 			continue
+		}
+
+		chat := model.Chat{
+			ID:       message.Chat.ID,
+			Type:     string(message.Chat.Type),
+			Title:    message.Chat.Title,
+			Username: message.Chat.Username,
+		}
+		user := model.User{
+			ID:        message.Sender.ID,
+			FirstName: message.Sender.FirstName,
+			LastName:  message.Sender.LastName,
+			Username:  message.Sender.Username,
+		}
+
+		if err := p.db.UpsertChat(chat); err != nil {
+			log.Printf("сохранение чата в базу: %v", err)
+		}
+
+		if err := p.db.UpsertUser(user, chat); err != nil {
+			log.Printf("сохранение пользователя в базу: %v", err)
 		}
 
 		carrotMessages = append(carrotMessages, model.Message{
@@ -106,7 +127,6 @@ func (p *Processor) learn(messages []*tele.Message) {
 			UnixTime: message.Unixtime,
 		})
 
-		text := messageText(message)
 		if text == "" {
 			continue
 		}

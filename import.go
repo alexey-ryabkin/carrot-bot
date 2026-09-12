@@ -111,7 +111,8 @@ func importHistory(path string, cfg *config.Service, markovCfg markov.Config) {
 
 	total := 0
 	for _, chat := range chats {
-		if err := db.UpsertChat(model.Chat{ID: chat.ID, Type: chat.Type, Title: chat.Name}); err != nil {
+		c := model.Chat{ID: chat.ID, Type: chat.Type, Title: chat.Name}
+		if err := db.UpsertChat(c); err != nil {
 			log.Fatal(err)
 		}
 
@@ -149,7 +150,7 @@ func importHistory(path string, cfg *config.Service, markovCfg markov.Config) {
 		}
 
 		for _, u := range users {
-			if err := db.UpsertUser(u); err != nil {
+			if err := db.UpsertUser(u, c); err != nil {
 				log.Fatal(err)
 			}
 		}

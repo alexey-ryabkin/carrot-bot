@@ -112,7 +112,7 @@ func (s *SQLite) CleanOldMessages(d time.Duration) error {
 	return nil
 }
 
-func (s *SQLite) UpsertUser(user model.User) error {
+func (s *SQLite) UpsertUser(user model.User, chat model.Chat) error {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return err
@@ -120,13 +120,13 @@ func (s *SQLite) UpsertUser(user model.User) error {
 	defer tx.Rollback()
 
 	_, err = tx.Exec(`
-		INSERT INTO users (id, firstName, lastName, username)
-		VALUES (?, ?, ?, ?)
+		INSERT INTO users (id, chatId, firstName, lastName, username)
+		VALUES (?, ?, ?, ?, ?)
 		ON CONFLICT(id) DO UPDATE SET
 			firstName = excluded.firstName,
 			lastName = excluded.lastName,
 			username = excluded.username
-	`, user.ID, user.FirstName, user.LastName, user.Username)
+	`, user.ID, chat.ID, user.FirstName, user.LastName, user.Username)
 
 	return tx.Commit()
 }
