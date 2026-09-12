@@ -122,11 +122,14 @@ func (s *SQLite) UpsertUser(user model.User, chat model.Chat) error {
 	_, err = tx.Exec(`
 		INSERT INTO users (id, chatId, firstName, lastName, username)
 		VALUES (?, ?, ?, ?, ?)
-		ON CONFLICT(id) DO UPDATE SET
+		ON CONFLICT(id, chatId) DO UPDATE SET
 			firstName = excluded.firstName,
 			lastName = excluded.lastName,
 			username = excluded.username
 	`, user.ID, chat.ID, user.FirstName, user.LastName, user.Username)
+	if err != nil {
+		return err
+	}
 
 	return tx.Commit()
 }
@@ -156,6 +159,9 @@ func (s *SQLite) UpsertChat(chat model.Chat) error {
 			title = excluded.title,
 			username = excluded.username
 	`, chat.ID, chat.Type, chat.Title, chat.Username)
+	if err != nil {
+		return err
+	}
 
 	return tx.Commit()
 }
